@@ -483,6 +483,15 @@ jobs:
         run: |
           IGNORE_FILE="ci-ignore-esp8266"
 
+          cd "${__PROJECT_EXAMPLE_DIR}"
+          for i in $(ls -d *); do
+            if [ ! -e "${__PROJECT_EXAMPLE_DIR}/${i}/${IGNORE_FILE}" ]; then
+              cd "${__PROJECT_EXAMPLE_DIR}/${i}"
+              echo "Building ${i}..."
+              make defconfig
+              make -j$(nproc)
+            fi
+          done
 
   build_esp8266_v3_3_x:
     runs-on: ubuntu-latest
@@ -626,8 +635,6 @@ jobs:
 
           IGNORE_FILE="ci-ignore-esp8266"
 
-          # these drivers do not compile for ESP8266 yet
-          export EXCLUDE_COMPONENTS="max7219 mcp23x17 led_strip max31865 ls7366r max31855"
           cd "${__PROJECT_EXAMPLE_DIR}"
           for i in $(ls -d *); do
             if [ ! -e "${__PROJECT_EXAMPLE_DIR}/${i}/${IGNORE_FILE}" ]; then
