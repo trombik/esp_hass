@@ -1,0 +1,13 @@
+---
+# automatically label PRs by branch name. prefix the branch name with one of
+# these prefixes.
+
+feature:
+  - "feature/*"
+  - "feat/*"
+fix:
+  - "fix/*"
+  - "bugfix/*"
+chore: "chore/*"
+ci: "ci"
+doc: "doc"
