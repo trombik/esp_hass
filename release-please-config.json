@@ -1,5 +1,8 @@
 {
   "release-type": "simple",
   "release-as": "0.9.0",
-  "draft": false
+  "draft": false,
+  "packages": {
+    ".": {}
+  }
 }
