@@ -11,3 +11,4 @@ jobs:
         with:
           command: manifest
           default-branch: release
+          changelog-types: '[{"type":"feat","section":"Features","hidden":false},{"type":"doc","section":"Documentation","hidden":false},{"type":"bugfix","section":"Bug Fixes","hidden":false}]'
