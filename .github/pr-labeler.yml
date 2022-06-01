@@ -10,4 +10,6 @@ fix:
   - "bugfix/*"
 chore: "chore/*"
 ci: "ci"
-doc: "doc"
+documentation:
+  - "documentation"
+  - "doc"
