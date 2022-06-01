@@ -26,8 +26,8 @@ jobs:
           concurrent_skipping: same_content
           skip_after_successful_duplicate: "true"
 
-          # if the change includes documentation, or ruby files changes only, skip.
-          paths_ignore: '["docs/**", "**/*.md", "*.md", "**/*.rb"]'
+          # if the change includes documentation, or workflow YAML files, skip.
+          paths_ignore: '["docs/**", "**/*.md", "*.md", ".github/*.yml"]'
 
           # but do not skip if the triggered event is one of these.
           do_not_skip: '["workflow_dispatch", "schedule", "pull_request"]'
