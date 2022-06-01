@@ -11,9 +11,8 @@ categories:
     label: documentation
   - title: CI
     label: ci
-exclude-contributors:
-  - "@trombik"
 change-template: "* $TITLE by @$AUTHOR (#$NUMBER)"
+change-title-escapes: "\<*_&@"
 template: |
   ## Release $NEXT_PATCH_VERSION
 
