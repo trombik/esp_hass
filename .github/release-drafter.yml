@@ -8,7 +8,7 @@ categories:
       - bugfix
       - fix
   - title: Documentation
-    label: doc
+    label: documentation
   - title: CI
     label: ci
 change-template: "* $TITLE by @$AUTHOR (#$NUMBER)"
