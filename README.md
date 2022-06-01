@@ -23,3 +23,11 @@ Labels are applied to PRs automatically by matching branch name.
 These labels are used by
 [release-drafter](https://github.com/release-drafter/release-drafter#change-template-variables),
 which automatically generates a draft release note.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Authors
+
+* [Tomoyuki Sakurai](https://github.com/trombik)
