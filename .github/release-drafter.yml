@@ -12,7 +12,7 @@ categories:
   - title: CI
     label: ci
 change-template: "* $TITLE by @$AUTHOR (#$NUMBER)"
-change-title-escapes: "\<*_&@"
+change-title-escapes: "@"
 template: |
   ## Release $NEXT_PATCH_VERSION
 
