@@ -12,7 +12,7 @@ categories:
   - title: CI
     label: ci
 exclude-contributors:
-  - trombik
+  - @trombik
 change-template: "* $TITLE by @$AUTHOR (#$NUMBER)"
 template: |
   ## Release $NEXT_PATCH_VERSION
