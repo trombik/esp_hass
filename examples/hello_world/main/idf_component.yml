@@ -1,0 +1,8 @@
+## IDF Component Manager Manifest File
+dependencies:
+  esp_websocket_client:
+    path: components/esp_websocket_client
+    git: "https://github.com/trombik/esp-protocols.git"
+    version: feat-ca-bundle
+  idf:
+    version: ">=4.1.0"
