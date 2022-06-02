@@ -16,17 +16,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <cJSON.h>
+#include <esp_crt_bundle.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
+#include <esp_tls.h>
 #include <esp_websocket_client.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 #include <freertos/semphr.h>
-#include <cJSON.h>
-#include <esp_tls.h>
-#include <esp_tls.h>
-#include <esp_crt_bundle.h>
 
 #define NO_DATA_TIMEOUT_SEC (30)
 
@@ -183,7 +182,7 @@ esp_hass_client_start(esp_hass_client_handle_t client)
 		goto fail;
 	}
 
-	//ESP_LOGI(TAG, "Connecting to %s", client->config->uri);
+	// ESP_LOGI(TAG, "Connecting to %s", client->config->uri);
 
 	err = esp_websocket_client_start(client->ws_client_handle);
 	if (err != ESP_OK) {
@@ -248,7 +247,8 @@ esp_hass_create_message_auth(esp_hass_client_handle_t client)
 		err = ESP_FAIL;
 		goto fail;
 	}
-	if (cJSON_AddStringToObject(client->json, "access_token", CONFIG_HASS_ACCESS_TOKEN) == NULL) {
+	if (cJSON_AddStringToObject(client->json, "access_token",
+		CONFIG_HASS_ACCESS_TOKEN) == NULL) {
 		ESP_LOGE(TAG, "cJSON_AddStringToObject(): type access_token");
 		err = ESP_FAIL;
 		goto fail;
@@ -259,7 +259,8 @@ fail:
 	return err;
 }
 
-esp_err_t esp_hass_client_auth(esp_hass_client_handle_t client)
+esp_err_t
+esp_hass_client_auth(esp_hass_client_handle_t client)
 {
 	esp_err_t err = ESP_FAIL;
 	char *json_string = NULL;
@@ -271,7 +272,8 @@ esp_err_t esp_hass_client_auth(esp_hass_client_handle_t client)
 
 	err = esp_hass_create_message_auth(client);
 	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "esp_hass_create_message_auth(): %s", esp_err_to_name(err));
+		ESP_LOGE(TAG, "esp_hass_create_message_auth(): %s",
+		    esp_err_to_name(err));
 		goto fail;
 	}
 
@@ -281,10 +283,10 @@ esp_err_t esp_hass_client_auth(esp_hass_client_handle_t client)
 	err = ESP_OK;
 fail:
 	return err;
-
 }
 
-esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client)
+esp_err_t
+esp_hass_client_ping(esp_hass_client_handle_t client)
 {
 	esp_err_t err = ESP_FAIL;
 
@@ -293,7 +295,8 @@ esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client)
 		goto fail;
 	}
 
-	if (esp_websocket_client_is_connected(client->ws_client_handle) != true) {
+	if (esp_websocket_client_is_connected(client->ws_client_handle) !=
+	    true) {
 		ESP_LOGE(TAG, "Not connected");
 		err = ESP_FAIL;
 		goto fail;

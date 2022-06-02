@@ -49,7 +49,6 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  */
 esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config);
 
-
 /**
  * @brief Destroy hass client. When the client is not needed, this function
  * should be called.
@@ -61,7 +60,6 @@ esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config);
  *	- NULL if failed.
  */
 esp_err_t esp_hass_destroy(esp_hass_client_handle_t client);
-
 
 /**
  * @brief Start the hass client.
