@@ -25,7 +25,11 @@
  * otherwise, older esp-idf builds fail.
  */
 
+/* ESP8266 does not have esp_crt_bundle.h */
+#if defined(CONFIG_IDF_TARGET_ESP32)
 #include <esp_crt_bundle.h>
+#endif
+
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
@@ -151,7 +155,7 @@ app_main(void)
  *
  * this means the example does not work with older esp-idf versions.
  */
-#if IDF_VERSION_MAJOR >= 5
+#if IDF_VERSION_MAJOR >= 5 && defined(CONFIG_IDF_TARGET_ESP32)
 	/* use default CA bundle */
 	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
 #endif

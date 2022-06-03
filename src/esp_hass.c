@@ -25,8 +25,12 @@
  * otherwise, older esp-idf builds fail.
  */
 
-#include <cJSON.h>
+/* ESP8266 does not have esp_crt_bundle.h */
+#if defined(CONFIG_IDF_TARGET_ESP32)
 #include <esp_crt_bundle.h>
+#endif
+
+#include <cJSON.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
