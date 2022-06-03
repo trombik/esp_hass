@@ -155,7 +155,7 @@ app_main(void)
  *
  * this means the example does not work with older esp-idf versions.
  */
-#if IDF_VERSION_MAJOR >= 5 && defined(CONFIG_IDF_TARGET_ESP32)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 	/* use default CA bundle */
 	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
 #endif
@@ -163,7 +163,7 @@ app_main(void)
 	/* double the default task_stack size to enable debug log */
 	ws_config.task_stack = (4 * 1024) * 2;
 
-#if IDF_VERSION_MAJOR >= 5
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 	/* set timeouts here to surpress warnings from WEBSOCKET_CLIENT */
 	ws_config.reconnect_timeout_ms = 10000;
 	ws_config.network_timeout_ms = 10000;
