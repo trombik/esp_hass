@@ -33,9 +33,9 @@ static const char *TAG = "esp_hass";
 static SemaphoreHandle_t shutdown_sema;
 
 typedef struct {
-	const char *uri;
 	const char *access_token;
 	int timeout_sec;
+	const esp_websocket_client_config_t *ws_config;
 
 } hass_config_storage_t;
 
@@ -158,7 +158,6 @@ esp_hass_init(esp_hass_config_t *config)
 {
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t hass_client = NULL;
-	esp_websocket_client_config_t ws_config = {};
 
 	if (config == NULL) {
 		ESP_LOGE(TAG, "esp_hass_init(): Invalid arg");
@@ -172,20 +171,17 @@ esp_hass_init(esp_hass_config_t *config)
 	}
 
 	hass_client->message_id = 0;
-	hass_client->config.uri = config->uri;
 	hass_client->config.access_token = config->access_token;
+	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
-	ESP_LOGI(TAG, "API URI: %s", hass_client->config.uri);
+	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
 	ESP_LOGI(TAG, "API access token: ****** (deducted)");
 	ESP_LOGI(TAG, "Websocket shutdown timeout: %d sec",
 	    hass_client->config.timeout_sec);
 
 	esp_tls_init_global_ca_store();
-	ws_config.uri = config->uri;
-	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
-	ws_config.task_stack = 4 * 1024 * 2;
 
-	hass_client->ws_client_handle = esp_websocket_client_init(&ws_config);
+	hass_client->ws_client_handle = esp_websocket_client_init(config->ws_config);
 	if (hass_client->ws_client_handle == NULL) {
 		ESP_LOGE(TAG, "esp_websocket_client_init(): fail");
 		goto fail;
@@ -246,7 +242,7 @@ esp_hass_client_start(esp_hass_client_handle_t client)
 		goto fail;
 	}
 
-	ESP_LOGI(TAG, "Connecting to %s", client->config.uri);
+	ESP_LOGI(TAG, "Connecting to %s", client->config.ws_config->uri);
 
 	err = esp_websocket_client_start(client->ws_client_handle);
 	if (err != ESP_OK) {

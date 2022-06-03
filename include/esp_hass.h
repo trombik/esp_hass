@@ -85,6 +85,7 @@ typedef struct {
 	const char *uri;
 	const char *access_token;
 	const int timeout_sec;
+	const esp_websocket_client_config_t *ws_config;
 
 } esp_hass_config_t;
 

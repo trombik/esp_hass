@@ -25,6 +25,7 @@
 #include <freertos/task.h>
 #include <nvs_flash.h>
 #include <stdio.h>
+#include <esp_crt_bundle.h>
 
 #include "freertos/event_groups.h"
 
@@ -130,10 +131,21 @@ app_main(void)
 {
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
+	esp_websocket_client_config_t ws_config = {0};
+
+	ws_config.uri = CONFIG_HASS_URI;
+
+	/* use default CA bundle */
+	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
+
+	/* double the default task_stack size to enable debug log */
+	ws_config.task_stack = (4 * 1024) * 2;
+
 	esp_hass_config_t config = {
 		.uri = CONFIG_HASS_URI,
 		.access_token = CONFIG_HASS_ACCESS_TOKEN,
 		.timeout_sec = 30,
+		.ws_config = &ws_config,
 	};
 
 	/* Initialize NVS */
