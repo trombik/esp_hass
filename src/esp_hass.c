@@ -107,10 +107,10 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 			ESP_LOGW(TAG, "Received closed message with code=%d",
 			    256 * data->data_ptr[0] + data->data_ptr[1]);
 		} else {
-			ESP_LOGW(TAG, "Received=%.*s", data->data_len,
+			ESP_LOGI(TAG, "Received=%.*s", data->data_len,
 			    (char *)data->data_ptr);
 		}
-		ESP_LOGW(TAG,
+		ESP_LOGD(TAG,
 		    "Total payload length=%d, data_len=%d, current payload offset=%d",
 		    data->payload_len, data->data_len, data->payload_offset);
 
