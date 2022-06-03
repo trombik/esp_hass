@@ -209,6 +209,7 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 	esp_err_t err = ESP_FAIL;
 
 	cJSON_Delete(client->json);
+	client->json = NULL;
 	err = esp_websocket_client_destroy(client->ws_client_handle);
 	if (err != ESP_OK) {
 		ESP_LOGW(TAG, "esp_websocket_client_destroy(): %s",
@@ -303,6 +304,10 @@ esp_hass_create_message_auth(esp_hass_client_handle_t client)
 		goto fail;
 	}
 
+	if (client->json != NULL) {
+		cJSON_Delete(client->json);
+		client->json = NULL;
+	}
 	client->json = cJSON_CreateObject();
 	if (cJSON_AddStringToObject(client->json, "type", "auth") == NULL) {
 		ESP_LOGE(TAG, "cJSON_AddStringToObject(): type auth");
