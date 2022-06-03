@@ -201,6 +201,16 @@ esp_hass_init(esp_hass_config_t *config)
 		goto fail;
 	}
 
+	hass_client->shutdown_signal_timer =
+	    xTimerCreate("Websocket shutdown timer",
+		hass_client->config.timeout_sec * 1000 / portTICK_PERIOD_MS, pdFALSE,
+		NULL, shutdown_handler);
+	if (hass_client->shutdown_signal_timer == NULL) {
+		ESP_LOGE(TAG, "xTimerCreate(): fail");
+		err = ESP_ERR_NO_MEM;
+		goto fail;
+	}
+
 	err = esp_websocket_register_events(hass_client->ws_client_handle,
 	    WEBSOCKET_EVENT_ANY, websocket_event_handler, (void *)hass_client);
 	if (err != ESP_OK) {
@@ -211,6 +221,15 @@ esp_hass_init(esp_hass_config_t *config)
 
 	return hass_client;
 fail:
+	if (hass_client->shutdown_signal_timer != NULL &&
+	    xTimerDelete(hass_client->shutdown_signal_timer, portMAX_DELAY) !=
+		pdPASS) {
+		ESP_LOGW(TAG, "xTimerDelete(): fail");
+	}
+	if (hass_client->ws_client_handle != NULL &&
+	    esp_websocket_client_destroy(hass_client->ws_client_handle) != ESP_OK) {
+		ESP_LOGW(TAG, "esp_websocket_client_destroy(): fail");
+	}
 	esp_hass_destroy(hass_client);
 	return NULL;
 }
@@ -238,15 +257,6 @@ esp_hass_client_start(esp_hass_client_handle_t client)
 
 	if (client == NULL) {
 		err = ESP_ERR_INVALID_ARG;
-		goto fail;
-	}
-
-	client->shutdown_signal_timer = xTimerCreate("Websocket shutdown timer",
-	    client->config.timeout_sec * 1000 / portTICK_PERIOD_MS, pdFALSE,
-	    NULL, shutdown_handler);
-	if (client->shutdown_signal_timer == NULL) {
-		ESP_LOGE(TAG, "xTimerCreate(): fail");
-		err = ESP_ERR_NO_MEM;
 		goto fail;
 	}
 
