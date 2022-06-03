@@ -146,7 +146,6 @@ app_main(void)
 	ws_config.network_timeout_ms = 10000;
 
 	esp_hass_config_t config = {
-		.uri = CONFIG_HASS_URI,
 		.access_token = CONFIG_HASS_ACCESS_TOKEN,
 		.timeout_sec = 30,
 		.ws_config = &ws_config,
