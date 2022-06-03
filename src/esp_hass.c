@@ -27,7 +27,7 @@
 #include <freertos/event_groups.h>
 #include <freertos/semphr.h>
 
-#define NO_DATA_TIMEOUT_SEC (30)
+#include "parser.h"
 
 static const char *TAG = "esp_hass";
 static SemaphoreHandle_t shutdown_sema;
@@ -43,6 +43,7 @@ struct esp_hass_client {
 	esp_websocket_client_handle_t ws_client_handle;
 	hass_config_storage_t config;
 	TimerHandle_t shutdown_signal_timer;
+	int message_id;
 	cJSON *json;
 };
 
@@ -54,6 +55,35 @@ shutdown_handler(TimerHandle_t xTimer)
 }
 
 static void
+message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
+{
+	esp_err_t err = ESP_FAIL;
+
+	switch (msg->type) {
+	case HASS_MESSAGE_TYPE_AUTH_REQUIRED:
+		ESP_LOGI(TAG, "Server requested auth");
+		err = esp_hass_client_auth(client);
+		if (err != ESP_OK) {
+			ESP_LOGE(TAG, "esp_hass_client_auth(): %s",
+			    esp_err_to_name(err));
+		}
+		break;
+	case HASS_MESSAGE_TYPE_AUTH_OK:
+		ESP_LOGI(TAG,
+		    "Server accepted auth, successfully authenticated");
+		break;
+	case HASS_MESSAGE_TYPE_AUTH_INVALID:
+		ESP_LOGI(TAG, "Server rejected auth, failed to authenticate");
+		break;
+	case HASS_MESSAGE_TYPE_PONG:
+		ESP_LOGI(TAG, "Server returned pong");
+		break;
+	default:
+		ESP_LOGW(TAG, "Unknown message type received, ignoring");
+	}
+}
+
+static void
 websocket_event_handler(void *handler_args, esp_event_base_t base,
     int32_t event_id, void *event_data)
 {
@@ -61,6 +91,7 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 	    handler_args;
 	esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)
 	    event_data;
+	esp_hass_message_t *hass_message;
 	switch (event_id) {
 	case WEBSOCKET_EVENT_CONNECTED:
 		ESP_LOGI(TAG, "WEBSOCKET_EVENT_CONNECTED");
@@ -69,6 +100,7 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 		ESP_LOGI(TAG, "WEBSOCKET_EVENT_DISCONNECTED");
 		break;
 	case WEBSOCKET_EVENT_DATA:
+		xTimerReset(client->shutdown_signal_timer, portMAX_DELAY);
 		ESP_LOGD(TAG, "WEBSOCKET_EVENT_DATA");
 		ESP_LOGD(TAG, "Received opcode=%d", data->op_code);
 		if (data->op_code == 0x08 && data->data_len == 2) {
@@ -81,7 +113,31 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 		ESP_LOGW(TAG,
 		    "Total payload length=%d, data_len=%d, current payload offset=%d",
 		    data->payload_len, data->data_len, data->payload_offset);
-		xTimerReset(client->shutdown_signal_timer, portMAX_DELAY);
+
+		/* ignore PONG frames because they are handled by websocket
+		 * client
+		 */
+		if (data->op_code == 0x09) {
+			ESP_LOGD(TAG, "PONG received");
+			break;
+		}
+
+		/* ignore empty payload */
+		if (data->payload_len == 0) {
+			ESP_LOGD(TAG, "empty payload received");
+			break;
+		}
+		hass_message = esp_hass_message_parse((char *)data->data_ptr,
+		    data->data_len);
+		if (hass_message == NULL) {
+			ESP_LOGE(TAG, "esp_hass_message_parse(): failed");
+			break;
+		} else {
+			ESP_LOGI(TAG, "HASS Message type: %d",
+			    hass_message->type);
+			message_handler(client, hass_message);
+		}
+		esp_hass_message_destroy(hass_message);
 		break;
 	case WEBSOCKET_EVENT_ERROR:
 		ESP_LOGI(TAG, "WEBSOCKET_EVENT_ERROR");
@@ -115,6 +171,7 @@ esp_hass_init(esp_hass_config_t *config)
 		goto fail;
 	}
 
+	hass_client->message_id = 0;
 	hass_client->config.uri = config->uri;
 	hass_client->config.access_token = config->access_token;
 	hass_client->config.timeout_sec = config->timeout_sec;
@@ -271,6 +328,7 @@ esp_hass_client_auth(esp_hass_client_handle_t client)
 {
 	esp_err_t err = ESP_FAIL;
 	char *json_string = NULL;
+	int length, json_string_length;
 
 	if (client == NULL) {
 		err = ESP_ERR_INVALID_ARG;
@@ -285,28 +343,21 @@ esp_hass_client_auth(esp_hass_client_handle_t client)
 	}
 
 	json_string = cJSON_Print(client->json);
-	ESP_LOGI(TAG, "auth message: %s", json_string);
-
-	err = ESP_OK;
-fail:
-	return err;
-}
-
-esp_err_t
-esp_hass_client_ping(esp_hass_client_handle_t client)
-{
-	esp_err_t err = ESP_FAIL;
-
-	if (client == NULL) {
-		err = ESP_ERR_INVALID_ARG;
-		goto fail;
-	}
-
-	if (esp_websocket_client_is_connected(client->ws_client_handle) !=
-	    true) {
-		ESP_LOGE(TAG, "Not connected");
+	if (json_string == NULL) {
+		ESP_LOGE(TAG, "cJSON_Print(): failed");
 		err = ESP_FAIL;
 		goto fail;
+	}
+	ESP_LOGI(TAG, "Sending auth message");
+	json_string_length = strlen(json_string);
+	length = esp_websocket_client_send_text(client->ws_client_handle,
+	    json_string, json_string_length, portMAX_DELAY);
+	if (length < 0) {
+		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
+	} else if (json_string_length != length) {
+		ESP_LOGE(TAG,
+		    "esp_websocket_client_send_text(): failed: data: %d bytes, data actually sent %d bytes",
+		    json_string_length, length);
 	}
 
 	err = ESP_OK;
