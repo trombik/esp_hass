@@ -145,8 +145,16 @@ app_main(void)
 	esp_log_level_set("esp_hass", ESP_LOG_DEBUG);
 	ws_config.uri = CONFIG_HASS_URI;
 
+/* version 5.x uses my fork with a fix to crt_bundle_attach, but older
+ * versions do not have the fix.
+ * see https://github.com/espressif/esp-protocols/pull/49
+ *
+ * this means the example does not work with older esp-idf versions.
+ */
+#if IDF_VERSION_MAJOR >= 5
 	/* use default CA bundle */
 	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
+#endif
 
 	/* double the default task_stack size to enable debug log */
 	ws_config.task_stack = (4 * 1024) * 2;
