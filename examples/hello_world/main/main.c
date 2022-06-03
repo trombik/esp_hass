@@ -16,6 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <esp_crt_bundle.h>
 #include <esp_err.h>
 #include <esp_event.h>
 #include <esp_hass.h>
@@ -25,7 +26,6 @@
 #include <freertos/task.h>
 #include <nvs_flash.h>
 #include <stdio.h>
-#include <esp_crt_bundle.h>
 
 #include "freertos/event_groups.h"
 
@@ -131,7 +131,7 @@ app_main(void)
 {
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
-	esp_websocket_client_config_t ws_config = {0};
+	esp_websocket_client_config_t ws_config = { 0 };
 
 	ws_config.uri = CONFIG_HASS_URI;
 

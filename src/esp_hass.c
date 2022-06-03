@@ -181,7 +181,8 @@ esp_hass_init(esp_hass_config_t *config)
 
 	esp_tls_init_global_ca_store();
 
-	hass_client->ws_client_handle = esp_websocket_client_init(config->ws_config);
+	hass_client->ws_client_handle = esp_websocket_client_init(
+	    config->ws_config);
 	if (hass_client->ws_client_handle == NULL) {
 		ESP_LOGE(TAG, "esp_websocket_client_init(): fail");
 		goto fail;
