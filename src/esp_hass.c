@@ -18,6 +18,7 @@
 
 #include <cJSON.h>
 #include <esp_crt_bundle.h>
+#include <esp_err.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
