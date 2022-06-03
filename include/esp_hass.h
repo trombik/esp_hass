@@ -81,11 +81,15 @@ typedef struct {
 	cJSON *json;  /*!< Pointer to cJSON struct of the message */
 } esp_hass_message_t;
 
+/**
+ * esp_hass configuration
+ */
 typedef struct {
-	const char *uri;
-	const char *access_token;
-	const int timeout_sec;
-	const esp_websocket_client_config_t *ws_config;
+	const char *access_token; /*!< The access token */
+	const int timeout_sec; /*!< Timeout in second when no response is back
+				  from the server. */
+	const esp_websocket_client_config_t
+	    *ws_config; /*!< configuration of esp_websocket_client */
 
 } esp_hass_config_t;
 
