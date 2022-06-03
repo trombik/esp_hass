@@ -133,7 +133,7 @@ app_main(void)
 	esp_hass_config_t config = {
 		.uri = CONFIG_HASS_URI,
 		.access_token = CONFIG_HASS_ACCESS_TOKEN,
-		.timeout_sec = 10,
+		.timeout_sec = 30,
 	};
 
 	/* Initialize NVS */
@@ -166,28 +166,11 @@ app_main(void)
 		goto start_fail;
 	}
 
-	err = esp_hass_client_auth(client);
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "esp_hass_client_auth(): %s",
-		    esp_err_to_name(err));
-		goto fail;
-	}
-
 	ESP_LOGI(TAG, "Starting loop");
 	while (1) {
-		/*
-		ESP_LOGI(TAG, "Sending ping");
-		err = esp_hass_ping(client);
-		if (err != ESP_OK) {
-			ESP_LOGE(TAG, "esp_hass_ping(): %s",
-		esp_err_to_name(err)); goto fail;
-		}
-		ESP_LOGI(TAG, "Recieved pong");
-		*/
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
 
-fail:
 	ESP_LOGI(TAG, "Stopping hass client");
 	err = esp_hass_client_stop(client);
 	if (err != ESP_OK) {
