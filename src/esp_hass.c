@@ -118,7 +118,7 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 		/* ignore PONG frames because they are handled by websocket
 		 * client
 		 */
-		if (data->op_code == 0x09) {
+		if (data->op_code == 0x0a) {
 			ESP_LOGD(TAG, "PONG received");
 			break;
 		}
