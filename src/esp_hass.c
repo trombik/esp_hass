@@ -221,15 +221,6 @@ esp_hass_init(esp_hass_config_t *config)
 
 	return hass_client;
 fail:
-	if (hass_client->shutdown_signal_timer != NULL &&
-	    xTimerDelete(hass_client->shutdown_signal_timer, portMAX_DELAY) !=
-		pdPASS) {
-		ESP_LOGW(TAG, "xTimerDelete(): fail");
-	}
-	if (hass_client->ws_client_handle != NULL &&
-	    esp_websocket_client_destroy(hass_client->ws_client_handle) != ESP_OK) {
-		ESP_LOGW(TAG, "esp_websocket_client_destroy(): fail");
-	}
 	esp_hass_destroy(hass_client);
 	return NULL;
 }
@@ -239,10 +230,23 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 {
 	esp_err_t err = ESP_FAIL;
 
-	cJSON_Delete(client->json);
+	if (client->shutdown_signal_timer != NULL &&
+	    xTimerDelete(client->shutdown_signal_timer, portMAX_DELAY) !=
+		pdPASS) {
+		ESP_LOGW(TAG, "xTimerDelete(): fail");
+	}
+	client->shutdown_signal_timer = NULL;
+	if (client->ws_client_handle != NULL &&
+	    esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
+		ESP_LOGW(TAG, "esp_websocket_client_destroy(): fail");
+	}
+	client->ws_client_handle = NULL;
+	if (client->json != NULL) {
+		cJSON_Delete(client->json);
+	}
 	client->json = NULL;
-	err = esp_websocket_client_destroy(client->ws_client_handle);
-	if (err != ESP_OK) {
+
+	if (client->ws_client_handle != NULL && esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
 		ESP_LOGW(TAG, "esp_websocket_client_destroy(): %s",
 		    esp_err_to_name(err));
 	}
