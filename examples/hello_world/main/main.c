@@ -133,6 +133,8 @@ app_main(void)
 	esp_hass_client_handle_t client = NULL;
 	esp_websocket_client_config_t ws_config = { 0 };
 
+	/* increase log level in esp_hass component only for debugging */
+	esp_log_level_set("esp_hass", ESP_LOG_DEBUG);
 	ws_config.uri = CONFIG_HASS_URI;
 
 	/* use default CA bundle */
