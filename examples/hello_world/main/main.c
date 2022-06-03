@@ -159,9 +159,11 @@ app_main(void)
 	/* double the default task_stack size to enable debug log */
 	ws_config.task_stack = (4 * 1024) * 2;
 
+#if IDF_VERSION_MAJOR >= 5
 	/* set timeouts here to surpress warnings from WEBSOCKET_CLIENT */
 	ws_config.reconnect_timeout_ms = 10000;
 	ws_config.network_timeout_ms = 10000;
+#endif
 
 	esp_hass_config_t config = {
 		.access_token = CONFIG_HASS_ACCESS_TOKEN,
