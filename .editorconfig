@@ -17,6 +17,7 @@ indent_size = 2
 
 [*.{c,h}]
 indent_style = tab
+indent_size = 8
 
 [*.pem]
 insert_final_newline = false
