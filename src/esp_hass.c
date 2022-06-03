@@ -352,10 +352,14 @@ esp_hass_client_auth(esp_hass_client_handle_t client)
 	    json_string, json_string_length, portMAX_DELAY);
 	if (length < 0) {
 		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
+		err = ESP_FAIL;
+		goto fail;
 	} else if (json_string_length != length) {
 		ESP_LOGE(TAG,
 		    "esp_websocket_client_send_text(): failed: data: %d bytes, data actually sent %d bytes",
 		    json_string_length, length);
+		err = ESP_FAIL;
+		goto fail;
 	}
 
 	err = ESP_OK;
