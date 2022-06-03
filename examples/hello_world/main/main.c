@@ -16,8 +16,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <esp_crt_bundle.h>
 #include <esp_err.h>
+
+/* include esp_err.h before esp_crt_bundle.h.
+ * see https://github.com/espressif/esp-idf/issues/8606 and
+ * https://github.com/espressif/esp-idf/commit/52170fba7f43d933232d7f9579ad4d9892162935
+ *
+ * otherwise, older esp-idf builds fail.
+ */
+
+#include <esp_crt_bundle.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
