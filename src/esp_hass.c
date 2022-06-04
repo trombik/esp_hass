@@ -30,6 +30,7 @@
 #include <esp_crt_bundle.h>
 #endif
 
+#include <assert.h>
 #include <cJSON.h>
 #include <esp_event.h>
 #include <esp_hass.h>
@@ -38,12 +39,12 @@
 #include <esp_websocket_client.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
-#include <freertos/semphr.h>
 
 #include "parser.h"
 
+#define ESP_HASS_RX_BUFFER_SIZE_BYTE (1024 * 10 + 1) // 10KB + NULL
+
 static const char *TAG = "esp_hass";
-static SemaphoreHandle_t shutdown_sema;
 
 typedef struct {
 	const char *access_token;
@@ -57,6 +58,7 @@ struct esp_hass_client {
 	hass_config_storage_t config;
 	TimerHandle_t shutdown_signal_timer;
 	int message_id;
+	char *rx_buffer;
 	cJSON *json;
 };
 
@@ -64,7 +66,6 @@ static void
 shutdown_handler(TimerHandle_t xTimer)
 {
 	ESP_LOGW(TAG, "timeout: No data received, shuting down");
-	xSemaphoreGive(shutdown_sema);
 }
 
 static void
@@ -74,7 +75,8 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 
 	switch (msg->type) {
 	case HASS_MESSAGE_TYPE_AUTH_REQUIRED:
-		ESP_LOGI(TAG, "Server requested auth");
+		ESP_LOGI(TAG,
+		    "HASS_MESSAGE_TYPE_AUTH_REQUIRED: Server requested auth");
 		err = esp_hass_client_auth(client);
 		if (err != ESP_OK) {
 			ESP_LOGE(TAG, "esp_hass_client_auth(): %s",
@@ -83,13 +85,21 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 		break;
 	case HASS_MESSAGE_TYPE_AUTH_OK:
 		ESP_LOGI(TAG,
-		    "Server accepted auth, successfully authenticated");
+		    "HASS_MESSAGE_TYPE_AUTH_OK: Server accepted auth, successfully authenticated");
 		break;
 	case HASS_MESSAGE_TYPE_AUTH_INVALID:
-		ESP_LOGI(TAG, "Server rejected auth, failed to authenticate");
+		ESP_LOGI(TAG,
+		    "HASS_MESSAGE_TYPE_AUTH_INVALID: Server rejected auth, failed to authenticate");
 		break;
 	case HASS_MESSAGE_TYPE_PONG:
-		ESP_LOGI(TAG, "Server returned pong");
+		ESP_LOGI(TAG, "HASS_MESSAGE_TYPE_PONG: Server returned pong");
+		break;
+	case HASS_MESSAGE_TYPE_RESULT:
+		ESP_LOGI(TAG,
+		    "HASS_MESSAGE_TYPE_RESULT: Got a result from the server");
+		break;
+	case HASS_MESSAGE_TYPE_EVENT:
+		ESP_LOGI(TAG, "HASS_MESSAGE_TYPE_EVENT");
 		break;
 	default:
 		ESP_LOGW(TAG, "Unknown message type received, ignoring");
@@ -100,6 +110,9 @@ static void
 websocket_event_handler(void *handler_args, esp_event_base_t base,
     int32_t event_id, void *event_data)
 {
+	int data_string_len;
+	char *data_string;
+
 	esp_hass_client_handle_t client = (esp_hass_client_handle_t)
 	    handler_args;
 	esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)
@@ -120,12 +133,15 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 			ESP_LOGW(TAG, "Received closed message with code=%d",
 			    256 * data->data_ptr[0] + data->data_ptr[1]);
 		} else {
-			ESP_LOGI(TAG, "Received=%.*s", data->data_len,
+			ESP_LOGD(TAG, "Received=%.*s", data->data_len,
 			    (char *)data->data_ptr);
 		}
+
 		ESP_LOGD(TAG,
 		    "Total payload length=%d, data_len=%d, current payload offset=%d",
 		    data->payload_len, data->data_len, data->payload_offset);
+		assert(
+		    data->payload_offset + data->data_len <= data->payload_len);
 
 		/* ignore PONG frames because they are handled by websocket
 		 * client
@@ -140,8 +156,43 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 			ESP_LOGD(TAG, "empty payload received");
 			break;
 		}
-		hass_message = esp_hass_message_parse((char *)data->data_ptr,
-		    data->data_len);
+
+		/* data->data_len is not null-terminated string, but bytes.
+		 * create a string from it. responses from Home Assistant
+		 * server are always a string
+		 */
+		data_string_len = data->data_len + 1;
+		data_string = calloc(1, data_string_len);
+		if (data_string == NULL) {
+			ESP_LOGE(TAG, "Out of memory");
+			break;
+		}
+		snprintf(data_string, data_string_len, "%.*s", data->data_len,
+		    (char *)data->data_ptr);
+		if (strlcat(client->rx_buffer, data_string,
+			ESP_HASS_RX_BUFFER_SIZE_BYTE) >=
+		    ESP_HASS_RX_BUFFER_SIZE_BYTE) {
+			ESP_LOGE(TAG,
+			    "rx_buffer overflow detected. rx_buffer size: %d, payload_len: %d",
+			    ESP_HASS_RX_BUFFER_SIZE_BYTE, data->payload_len);
+			strlcpy(client->rx_buffer, "",
+			    ESP_HASS_RX_BUFFER_SIZE_BYTE);
+			free(data_string);
+			break;
+		}
+		free(data_string);
+
+		if (data->payload_offset + data->data_len < data->payload_len) {
+			/* expect other fragments to arrive */
+			ESP_LOGD(TAG,
+			    "data->payload_offset (%d) + data->data_len (%d) < data->payload_len (%d)",
+			    data->payload_offset, data->data_len,
+			    data->payload_len);
+			break;
+		}
+		ESP_LOGD(TAG, "client->rx_buffer: `%s`", client->rx_buffer);
+		hass_message = esp_hass_message_parse(client->rx_buffer,
+		    strlen(client->rx_buffer));
 		if (hass_message == NULL) {
 			ESP_LOGE(TAG, "esp_hass_message_parse(): failed");
 			break;
@@ -151,6 +202,7 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 			message_handler(client, hass_message);
 		}
 		esp_hass_message_destroy(hass_message);
+		strlcpy(client->rx_buffer, "", ESP_HASS_RX_BUFFER_SIZE_BYTE);
 		break;
 	case WEBSOCKET_EVENT_ERROR:
 		ESP_LOGI(TAG, "WEBSOCKET_EVENT_ERROR");
@@ -184,6 +236,12 @@ esp_hass_init(esp_hass_config_t *config)
 	}
 
 	hass_client->message_id = 0;
+	hass_client->rx_buffer = calloc(1, ESP_HASS_RX_BUFFER_SIZE_BYTE);
+	ESP_LOGD(TAG, "hass_client->rx_buffer: `%s`", hass_client->rx_buffer);
+	if (hass_client->rx_buffer == NULL) {
+		ESP_LOGE(TAG, "Out of memory: rx_buffer");
+		goto fail;
+	}
 	hass_client->config.access_token = config->access_token;
 	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
@@ -203,8 +261,8 @@ esp_hass_init(esp_hass_config_t *config)
 
 	hass_client->shutdown_signal_timer =
 	    xTimerCreate("Websocket shutdown timer",
-		hass_client->config.timeout_sec * 1000 / portTICK_PERIOD_MS, pdFALSE,
-		NULL, shutdown_handler);
+		hass_client->config.timeout_sec * 1000 / portTICK_PERIOD_MS,
+		pdFALSE, NULL, shutdown_handler);
 	if (hass_client->shutdown_signal_timer == NULL) {
 		ESP_LOGE(TAG, "xTimerCreate(): fail");
 		err = ESP_ERR_NO_MEM;
@@ -246,9 +304,14 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 	}
 	client->json = NULL;
 
-	if (client->ws_client_handle != NULL && esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
+	if (client->ws_client_handle != NULL &&
+	    esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
 		ESP_LOGW(TAG, "esp_websocket_client_destroy(): %s",
 		    esp_err_to_name(err));
+	}
+
+	if (client->rx_buffer != NULL) {
+		free(client->rx_buffer);
 	}
 	free(client);
 	return ESP_OK;
@@ -264,13 +327,6 @@ esp_hass_client_start(esp_hass_client_handle_t client)
 		goto fail;
 	}
 
-	shutdown_sema = xSemaphoreCreateBinary();
-	if (shutdown_sema == NULL) {
-		ESP_LOGE(TAG, "xSemaphoreCreateBinary(): fail");
-		err = ESP_ERR_NO_MEM;
-		goto fail;
-	}
-
 	ESP_LOGI(TAG, "Connecting to %s", client->config.ws_config->uri);
 
 	err = esp_websocket_client_start(client->ws_client_handle);
@@ -283,11 +339,6 @@ esp_hass_client_start(esp_hass_client_handle_t client)
 	if (xTimerStart(client->shutdown_signal_timer, portMAX_DELAY) !=
 	    pdPASS) {
 		ESP_LOGE(TAG, "xTimerStart(): fail");
-		err = ESP_FAIL;
-		goto fail;
-	}
-	if (xSemaphoreTake(shutdown_sema, portMAX_DELAY) != pdTRUE) {
-		ESP_LOGE(TAG, "xSemaphoreTake(): failed");
 		err = ESP_FAIL;
 		goto fail;
 	}
@@ -378,6 +429,107 @@ esp_hass_client_auth(esp_hass_client_handle_t client)
 		goto fail;
 	}
 	ESP_LOGI(TAG, "Sending auth message");
+	json_string_length = strlen(json_string);
+	length = esp_websocket_client_send_text(client->ws_client_handle,
+	    json_string, json_string_length, portMAX_DELAY);
+	if (length < 0) {
+		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
+		err = ESP_FAIL;
+		goto fail;
+	} else if (json_string_length != length) {
+		ESP_LOGE(TAG,
+		    "esp_websocket_client_send_text(): failed: data: %d bytes, data actually sent %d bytes",
+		    json_string_length, length);
+		err = ESP_FAIL;
+		goto fail;
+	}
+
+	err = ESP_OK;
+fail:
+	return err;
+}
+
+bool
+esp_hass_client_is_connected(esp_hass_client_handle_t client)
+{
+	bool connected = false;
+	if (client == NULL || client->ws_client_handle == NULL) {
+		goto no;
+	}
+	connected = esp_websocket_client_is_connected(client->ws_client_handle);
+no:
+	return connected;
+}
+
+static esp_err_t
+esp_hass_create_message_subscribe_events(esp_hass_client_handle_t client,
+    char *event_type)
+{
+	esp_err_t err = ESP_FAIL;
+
+	if (client == NULL) {
+		err = ESP_ERR_INVALID_ARG;
+		goto fail;
+	}
+
+	if (client->json != NULL) {
+		cJSON_Delete(client->json);
+		client->json = NULL;
+	}
+	client->json = cJSON_CreateObject();
+	if (cJSON_AddNumberToObject(client->json, "id", ++client->message_id) ==
+	    NULL) {
+		err = ESP_FAIL;
+		goto fail;
+	}
+	if (cJSON_AddStringToObject(client->json, "type", "subscribe_events") ==
+	    NULL) {
+		err = ESP_FAIL;
+		goto fail;
+	}
+	if (event_type != NULL) {
+		if (cJSON_AddStringToObject(client->json, "event_type",
+			event_type) == NULL) {
+			err = ESP_FAIL;
+			goto fail;
+		}
+	}
+	err = ESP_OK;
+	return err;
+fail:
+	if (client->json != NULL) {
+		cJSON_Delete(client->json);
+	}
+	return err;
+}
+
+esp_err_t
+esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
+    char *event_type)
+{
+	esp_err_t err = ESP_FAIL;
+	char *json_string = NULL;
+	int length, json_string_length;
+
+	if (client == NULL) {
+		err = ESP_ERR_INVALID_ARG;
+		goto fail;
+	}
+
+	err = esp_hass_create_message_subscribe_events(client, event_type);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_hass_create_message_subscribe_events(): %s",
+		    esp_err_to_name(err));
+		goto fail;
+	}
+
+	json_string = cJSON_Print(client->json);
+	if (json_string == NULL) {
+		ESP_LOGE(TAG, "cJSON_Print(): failed");
+		err = ESP_FAIL;
+		goto fail;
+	}
+	ESP_LOGI(TAG, "Sending subscribe_events command");
 	json_string_length = strlen(json_string);
 	length = esp_websocket_client_send_text(client->ws_client_handle,
 	    json_string, json_string_length, portMAX_DELAY);

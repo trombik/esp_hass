@@ -205,6 +205,17 @@ app_main(void)
 		goto start_fail;
 	}
 
+	ESP_LOGI(TAG, "Waiting for WebSocket connection");
+	do {
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	} while (!esp_hass_client_is_connected(client));
+
+	ESP_LOGI(TAG, "Subscribe to all events");
+	err = esp_hass_client_subscribe_events(client, NULL);
+	if (err != ESP_OK) {
+		goto fail;
+	}
+
 	ESP_LOGI(TAG, "Starting loop");
 	while (1) {
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -216,7 +227,7 @@ app_main(void)
 		ESP_LOGE(TAG, "esp_hass_client_stop(): %s",
 		    esp_err_to_name(err));
 	}
-
+fail:
 start_fail:
 	ESP_LOGI(TAG, "Destroying hass client");
 	err = esp_hass_destroy(client);

@@ -166,6 +166,30 @@ esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client);
 
 esp_err_t esp_hass_client_auth(esp_hass_client_handle_t client);
 
+/**
+ * @brief Subscribe to events.
+ *
+ * @param[in] client The hass client
+ * @param[in] event_type Type of event to subscribe. One of event types or
+ * NULL. When NULL, Subscribes to all events. See a list of event types
+ * at: https://www.home-assistant.io/docs/configuration/events/
+ *
+ * @return
+ *   - ESP_OK if successful
+ */
+esp_err_t esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
+    char *event_type);
+
+/**
+ * @brief See if WebSocket is connected.
+ *
+ * @param[in] client The hass client
+ *
+ * @return bool
+ *
+ */
+bool esp_hass_client_is_connected(esp_hass_client_handle_t client);
+
 #ifdef __cplusplus
 }
 #endif
