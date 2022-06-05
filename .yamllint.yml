@@ -1,0 +1,18 @@
+---
+extends: default
+
+rules:
+  document-start:
+    level: error
+  truthy: disable
+  comments:
+    level: error
+  line-length:
+    max: 512
+    level: warning
+
+ignore: |
+  # yamllint does not understand erb template
+  .tox
+  examples/hello_world/managed_components
+  examples/hello_world/build
