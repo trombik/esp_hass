@@ -65,7 +65,7 @@ esp_hass_message_parse(char *data, int data_len)
 	esp_hass_message_t *msg = NULL;
 	cJSON *type = NULL;
 	cJSON *id = NULL;
-	cJSON *result = NULL;
+	cJSON *success = NULL;
 
 	if (data == NULL) {
 		goto fail;
@@ -92,19 +92,34 @@ esp_hass_message_parse(char *data, int data_len)
 	}
 
 	id = cJSON_GetObjectItem(msg->json, "id");
-	if (cJSON_IsNumber(id) && id->valueint >= 0) {
+	if (cJSON_IsNumber(id)) {
 		msg->id = id->valueint;
 	} else {
+		ESP_LOGD(TAG, "attribute `id` is not present");
 		msg->id = -1;
 	}
 
-	result = cJSON_GetObjectItem(msg->json, "success");
-	if (cJSON_IsBool(result) && cJSON_IsTrue(result)) {
-		msg->success = HASS_MESSAGE_STATUS_SUCCESS;
-	} else if (cJSON_IsBool(result) && cJSON_IsFalse(result)) {
-		msg->success = HASS_MESSAGE_STATUS_FAIL;
-	} else {
-		msg->success = HASS_MESSAGE_STATUS_UNDEF;
+	switch (msg->type) {
+	case HASS_MESSAGE_TYPE_RESULT:
+		ESP_LOGD(TAG, "Message type: HASS_MESSAGE_TYPE_RESULT");
+		success = cJSON_GetObjectItem(msg->json, "success");
+		if (success != NULL) {
+			if (cJSON_IsBool(success)) {
+				ESP_LOGD(TAG, "cJSON_IsTrue(success): %s",
+				    cJSON_IsTrue(success) ? "true" : "false");
+				msg->success = cJSON_IsTrue(success);
+			} else {
+				ESP_LOGW(TAG,
+				    "attribute `success` is not bool");
+				msg->success = false;
+			}
+		} else {
+			ESP_LOGD(TAG, "attribute `success` does not exist");
+			msg->success = false;
+		}
+		break;
+	default:
+		break;
 	}
 
 	return msg;
@@ -114,25 +129,4 @@ fail:
 	free(msg);
 	msg = NULL;
 	return NULL;
-}
-
-esp_err_t
-esp_hass_message_destroy(esp_hass_message_t *msg)
-{
-	esp_err_t err = ESP_FAIL;
-
-	if (msg == NULL) {
-		err = ESP_ERR_INVALID_ARG;
-		goto fail;
-	}
-
-	if (msg->json != NULL) {
-		cJSON_free(msg->json);
-		msg->json = NULL;
-	}
-	free(msg);
-	msg = NULL;
-	err = ESP_OK;
-fail:
-	return err;
 }

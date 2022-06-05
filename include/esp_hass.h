@@ -26,6 +26,7 @@ extern "C" {
 #include <cJSON.h>
 #include <esp_err.h>
 #include <esp_websocket_client.h>
+#include <freertos/queue.h>
 
 /**
  * Home Assistant message types.
@@ -100,13 +101,15 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  * `esp_hass_*` function.
  *
  * @param[in] config Configuration.
+ * @param[in] queue Queue handle for received hass messages.
  *
  * @return
  *	- pointer to hass client handle. This handle must be passed to other
  *	`esp_hass_*` functions.
  *	- NULL if failed.
  */
-esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config);
+esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config,
+    QueueHandle_t queue);
 
 /**
  * @brief Destroy hass client. When the client is not needed, this function
@@ -165,6 +168,60 @@ esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client);
  */
 
 esp_err_t esp_hass_client_auth(esp_hass_client_handle_t client);
+
+/**
+ * @brief Subscribe to events.
+ *
+ * @param[in] client The hass client
+ * @param[in] event_type Type of event to subscribe. One of event types or
+ * NULL. When NULL, Subscribes to all events. See a list of event types
+ * at: https://www.home-assistant.io/docs/configuration/events/
+ *
+ * @return
+ *   - ESP_OK if successful
+ */
+esp_err_t esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
+    char *event_type);
+
+/**
+ * @brief See if WebSocket is connected.
+ *
+ * @param[in] client The hass client
+ *
+ * @return bool
+ *
+ */
+bool esp_hass_client_is_connected(esp_hass_client_handle_t client);
+
+/**
+ * @brief See if esp_hass client has been authenticated.
+ *
+ * @param[in] client The hass client
+ *
+ * @return bool
+ */
+
+bool esp_hass_client_is_authenticated(esp_hass_client_handle_t client);
+
+/**
+ * @brief Destroy `esp_hass_message_t`, free() the memory allocated for the
+ * message. Must be called after receiving a message from the queue, and done
+ * with the message.
+ *
+ * @return
+ * - ESP_OK if success
+ */
+esp_err_t esp_hass_message_destroy(esp_hass_message_t *msg);
+
+/**
+ * @brief Get Home Assistant version. The version is only available after
+ * authentication attempt.
+ *
+ * @param[in] client The hass client
+ *
+ * @return ha_version string
+ */
+char *esp_hass_client_get_ha_version(esp_hass_client_handle_t client);
 
 #ifdef __cplusplus
 }
