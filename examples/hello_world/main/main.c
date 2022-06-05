@@ -26,13 +26,13 @@
  */
 
 #include <esp_crt_bundle.h>
-
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
 #include <esp_wifi.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/queue.h>
 #include <nvs_flash.h>
 #include <stdio.h>
 
@@ -141,6 +141,9 @@ app_main(void)
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
 	esp_websocket_client_config_t ws_config = { 0 };
+	int message_queue_len = 5;
+	QueueHandle_t message_queue;
+	esp_hass_message_t msg;
 
 	/* increase log level in esp_hass component only for debugging */
 	esp_log_level_set("esp_hass", ESP_LOG_DEBUG);
@@ -172,6 +175,12 @@ app_main(void)
 		.ws_config = &ws_config,
 	};
 
+	message_queue = xQueueCreate(message_queue_len, sizeof(esp_hass_message_t));
+	if (message_queue == NULL) {
+		ESP_LOGE(TAG, "xQueueCreate(): Out of memory");
+		goto init_fail;
+	}
+
 	/* Initialize NVS */
 	esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -188,7 +197,7 @@ app_main(void)
 	}
 
 	ESP_LOGI(TAG, "Initializing hass client");
-	client = esp_hass_init(&config);
+	client = esp_hass_init(&config, message_queue);
 	if (client == NULL) {
 		ESP_LOGE(TAG, "esp_hass_init(): failed");
 		goto init_fail;
@@ -215,7 +224,12 @@ app_main(void)
 
 	ESP_LOGI(TAG, "Starting loop");
 	while (1) {
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		if (xQueueReceive(message_queue, &msg, portMAX_DELAY) != pdTRUE) {
+			ESP_LOGE(TAG, "xQueueReceive(): failed");
+		} else {
+			ESP_LOGI(TAG, "Message type: %d", msg.type);
+		}
+		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
 
 	ESP_LOGI(TAG, "Stopping hass client");
@@ -233,6 +247,9 @@ start_fail:
 	}
 
 init_fail:
+	if (message_queue != NULL) {
+		vQueueDelete(message_queue);
+	}
 	ESP_LOGI(TAG, "The example terminated with an error. Please reboot.");
 	while (1) {
 		vTaskDelay(1000 / portTICK_PERIOD_MS);

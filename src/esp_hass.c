@@ -25,10 +25,9 @@
  * otherwise, older esp-idf builds fail.
  */
 
-#include <esp_crt_bundle.h>
-
 #include <assert.h>
 #include <cJSON.h>
+#include <esp_crt_bundle.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
@@ -40,6 +39,7 @@
 #include "parser.h"
 
 #define ESP_HASS_RX_BUFFER_SIZE_BYTE (1024 * 10 + 1) // 10KB + NULL
+#define ESP_HASS_QUEUE_SEND_WAIT_MS (1000)
 
 static const char *TAG = "esp_hass";
 
@@ -57,6 +57,7 @@ struct esp_hass_client {
 	int message_id;
 	char *rx_buffer;
 	cJSON *json;
+	QueueHandle_t queue;
 };
 
 static void
@@ -69,6 +70,7 @@ static void
 message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 {
 	esp_err_t err = ESP_FAIL;
+	BaseType_t rtos_err = pdFALSE;
 
 	switch (msg->type) {
 	case HASS_MESSAGE_TYPE_AUTH_REQUIRED:
@@ -100,6 +102,12 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 		break;
 	default:
 		ESP_LOGW(TAG, "Unknown message type received, ignoring");
+	}
+	if (client->queue != NULL) {
+		rtos_err = xQueueSend(client->queue, msg, ESP_HASS_QUEUE_SEND_WAIT_MS / portTICK_PERIOD_MS);
+		if (rtos_err != pdTRUE) {
+			ESP_LOGW(TAG, "xQueueSend(): failed");
+		}
 	}
 }
 
@@ -216,7 +224,7 @@ esp_hass_hello_world()
 }
 
 esp_hass_client_handle_t
-esp_hass_init(esp_hass_config_t *config)
+esp_hass_init(esp_hass_config_t *config, QueueHandle_t queue)
 {
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t hass_client = NULL;
@@ -242,6 +250,7 @@ esp_hass_init(esp_hass_config_t *config)
 	hass_client->config.access_token = config->access_token;
 	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
+	hass_client->queue = queue;
 	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
 	ESP_LOGI(TAG, "API access token: ****** (deducted)");
 	ESP_LOGI(TAG, "Websocket shutdown timeout: %d sec",

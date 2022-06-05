@@ -26,6 +26,7 @@ extern "C" {
 #include <cJSON.h>
 #include <esp_err.h>
 #include <esp_websocket_client.h>
+#include <freertos/queue.h>
 
 /**
  * Home Assistant message types.
@@ -100,13 +101,14 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  * `esp_hass_*` function.
  *
  * @param[in] config Configuration.
+ * @param[in] queue Queue handle for received hass messages.
  *
  * @return
  *	- pointer to hass client handle. This handle must be passed to other
  *	`esp_hass_*` functions.
  *	- NULL if failed.
  */
-esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config);
+esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config, QueueHandle_t queue);
 
 /**
  * @brief Destroy hass client. When the client is not needed, this function
