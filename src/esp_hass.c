@@ -40,6 +40,7 @@
 
 #define ESP_HASS_RX_BUFFER_SIZE_BYTE (1024 * 10 + 1) // 10KB + NULL
 #define ESP_HASS_QUEUE_SEND_WAIT_MS (1000)
+#define ESP_HASS_VERSION_STRING_MAX_LEN (32)
 
 static const char *TAG = "esp_hass";
 
@@ -56,6 +57,8 @@ struct esp_hass_client {
 	TimerHandle_t shutdown_signal_timer;
 	int message_id;
 	char *rx_buffer;
+	bool is_authenticated;
+	char ha_version[ESP_HASS_VERSION_STRING_MAX_LEN];
 	cJSON *json;
 	QueueHandle_t queue;
 };
@@ -72,41 +75,50 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 	esp_err_t err = ESP_FAIL;
 	BaseType_t rtos_err = pdFALSE;
 
+	assert(client != NULL && msg != NULL && msg->json != NULL);
+
 	switch (msg->type) {
+
+	/* perform authentication if necessary. do not queue auth-related
+	 * messages.
+	 */
+	case HASS_MESSAGE_TYPE_AUTH_INVALID:
+		ESP_LOGE(TAG, "Authentication failed");
+		/* FALLTHROUGH */
 	case HASS_MESSAGE_TYPE_AUTH_REQUIRED:
-		ESP_LOGI(TAG,
-		    "HASS_MESSAGE_TYPE_AUTH_REQUIRED: Server requested auth");
+		client->is_authenticated = false;
+
+		/* ha_version is present in auth-related messages only */
+		if (strlcpy(client->ha_version,
+			cJSON_GetObjectItem(msg->json, "ha_version")
+			    ->valuestring,
+			sizeof(client->ha_version)) >=
+		    sizeof(client->ha_version)) {
+			ESP_LOGW(TAG, "ha_version in response too long");
+		}
+		ESP_LOGD(TAG, "ha_version: `%s`", client->ha_version);
+
 		err = esp_hass_client_auth(client);
 		if (err != ESP_OK) {
 			ESP_LOGE(TAG, "esp_hass_client_auth(): %s",
 			    esp_err_to_name(err));
 		}
+		esp_hass_message_destroy(msg);
 		break;
 	case HASS_MESSAGE_TYPE_AUTH_OK:
-		ESP_LOGI(TAG,
-		    "HASS_MESSAGE_TYPE_AUTH_OK: Server accepted auth, successfully authenticated");
-		break;
-	case HASS_MESSAGE_TYPE_AUTH_INVALID:
-		ESP_LOGI(TAG,
-		    "HASS_MESSAGE_TYPE_AUTH_INVALID: Server rejected auth, failed to authenticate");
+		ESP_LOGI(TAG, "Authentication successful");
+		client->is_authenticated = true;
+		esp_hass_message_destroy(msg);
 		break;
 	case HASS_MESSAGE_TYPE_PONG:
-		ESP_LOGI(TAG, "HASS_MESSAGE_TYPE_PONG: Server returned pong");
-		break;
 	case HASS_MESSAGE_TYPE_RESULT:
-		ESP_LOGI(TAG,
-		    "HASS_MESSAGE_TYPE_RESULT: Got a result from the server");
-		break;
 	case HASS_MESSAGE_TYPE_EVENT:
-		ESP_LOGI(TAG, "HASS_MESSAGE_TYPE_EVENT");
-		break;
 	default:
-		ESP_LOGW(TAG, "Unknown message type received, ignoring");
-	}
-	if (client->queue != NULL) {
-		rtos_err = xQueueSend(client->queue, msg, ESP_HASS_QUEUE_SEND_WAIT_MS / portTICK_PERIOD_MS);
+		rtos_err = xQueueSend(client->queue, &msg,
+		    ESP_HASS_QUEUE_SEND_WAIT_MS / portTICK_PERIOD_MS);
 		if (rtos_err != pdTRUE) {
 			ESP_LOGW(TAG, "xQueueSend(): failed");
+			esp_hass_message_destroy(msg);
 		}
 	}
 }
@@ -138,7 +150,7 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 			ESP_LOGW(TAG, "Received closed message with code=%d",
 			    256 * data->data_ptr[0] + data->data_ptr[1]);
 		} else {
-			ESP_LOGD(TAG, "Received=%.*s", data->data_len,
+			ESP_LOGV(TAG, "Received=%.*s", data->data_len,
 			    (char *)data->data_ptr);
 		}
 
@@ -188,25 +200,21 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 		free(data_string);
 
 		if (data->payload_offset + data->data_len < data->payload_len) {
+
 			/* expect other fragments to arrive */
-			ESP_LOGD(TAG,
-			    "data->payload_offset (%d) + data->data_len (%d) < data->payload_len (%d)",
-			    data->payload_offset, data->data_len,
-			    data->payload_len);
 			break;
 		}
-		ESP_LOGD(TAG, "client->rx_buffer: `%s`", client->rx_buffer);
+
+		/* now we have a complete json string */
+		ESP_LOGV(TAG, "client->rx_buffer: `%s`", client->rx_buffer);
 		hass_message = esp_hass_message_parse(client->rx_buffer,
 		    strlen(client->rx_buffer));
 		if (hass_message == NULL) {
 			ESP_LOGE(TAG, "esp_hass_message_parse(): failed");
 			break;
 		} else {
-			ESP_LOGI(TAG, "HASS Message type: %d",
-			    hass_message->type);
 			message_handler(client, hass_message);
 		}
-		esp_hass_message_destroy(hass_message);
 		strlcpy(client->rx_buffer, "", ESP_HASS_RX_BUFFER_SIZE_BYTE);
 		break;
 	case WEBSOCKET_EVENT_ERROR:
@@ -251,6 +259,8 @@ esp_hass_init(esp_hass_config_t *config, QueueHandle_t queue)
 	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
 	hass_client->queue = queue;
+	hass_client->is_authenticated = false;
+	hass_client->json = NULL;
 	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
 	ESP_LOGI(TAG, "API access token: ****** (deducted)");
 	ESP_LOGI(TAG, "Websocket shutdown timeout: %d sec",
@@ -307,8 +317,8 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 	client->ws_client_handle = NULL;
 	if (client->json != NULL) {
 		cJSON_Delete(client->json);
+		client->json = NULL;
 	}
-	client->json = NULL;
 
 	if (client->ws_client_handle != NULL &&
 	    esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
@@ -452,6 +462,14 @@ esp_hass_client_auth(esp_hass_client_handle_t client)
 
 	err = ESP_OK;
 fail:
+	if (json_string != NULL) {
+		free(json_string);
+		json_string = NULL;
+	}
+	if (client->json != NULL) {
+		cJSON_Delete(client->json);
+		client->json = NULL;
+	}
 	return err;
 }
 
@@ -465,6 +483,12 @@ esp_hass_client_is_connected(esp_hass_client_handle_t client)
 	connected = esp_websocket_client_is_connected(client->ws_client_handle);
 no:
 	return connected;
+}
+
+bool
+esp_hass_client_is_authenticated(esp_hass_client_handle_t client)
+{
+	return client->is_authenticated;
 }
 
 static esp_err_t
@@ -505,6 +529,7 @@ esp_hass_create_message_subscribe_events(esp_hass_client_handle_t client,
 fail:
 	if (client->json != NULL) {
 		cJSON_Delete(client->json);
+		client->json = NULL;
 	}
 	return err;
 }
@@ -551,6 +576,41 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 		goto fail;
 	}
 
+	err = ESP_OK;
+fail:
+	if (json_string != NULL) {
+		free(json_string);
+		json_string = NULL;
+	}
+	if (client->json != NULL) {
+		cJSON_Delete(client->json);
+		client->json = NULL;
+	}
+	return err;
+}
+
+char *
+esp_hass_client_get_ha_version(esp_hass_client_handle_t client)
+{
+	return client->ha_version;
+}
+
+esp_err_t
+esp_hass_message_destroy(esp_hass_message_t *msg)
+{
+	esp_err_t err = ESP_FAIL;
+
+	if (msg == NULL) {
+		err = ESP_ERR_INVALID_ARG;
+		goto fail;
+	}
+
+	if (msg->json != NULL) {
+		cJSON_Delete(msg->json);
+		msg->json = NULL;
+	}
+	free(msg);
+	msg = NULL;
 	err = ESP_OK;
 fail:
 	return err;

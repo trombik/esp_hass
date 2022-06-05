@@ -33,14 +33,4 @@
  */
 esp_hass_message_t *esp_hass_message_parse(char *data, int data_len);
 
-/**
- * @brief Destroy `esp_hass_message_t`, free() the memory allocated by
- * `esp_hass_message_parse()`. Must be called by the caller of
- * `esp_hass_message_parse()`.
- *
- * @return
- * - ESP_OK if success
- */
-esp_err_t esp_hass_message_destroy(esp_hass_message_t *msg);
-
 #endif

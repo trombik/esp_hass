@@ -108,7 +108,8 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  *	`esp_hass_*` functions.
  *	- NULL if failed.
  */
-esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config, QueueHandle_t queue);
+esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config,
+    QueueHandle_t queue);
 
 /**
  * @brief Destroy hass client. When the client is not needed, this function
@@ -191,6 +192,36 @@ esp_err_t esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
  *
  */
 bool esp_hass_client_is_connected(esp_hass_client_handle_t client);
+
+/**
+ * @brief See if esp_hass client has been authenticated.
+ *
+ * @param[in] client The hass client
+ *
+ * @return bool
+ */
+
+bool esp_hass_client_is_authenticated(esp_hass_client_handle_t client);
+
+/**
+ * @brief Destroy `esp_hass_message_t`, free() the memory allocated for the
+ * message. Must be called after receiving a message from the queue, and done
+ * with the message.
+ *
+ * @return
+ * - ESP_OK if success
+ */
+esp_err_t esp_hass_message_destroy(esp_hass_message_t *msg);
+
+/**
+ * @brief Get Home Assistant version. The version is only available after
+ * authentication attempt.
+ *
+ * @param[in] client The hass client
+ *
+ * @return ha_version string
+ */
+char *esp_hass_client_get_ha_version(esp_hass_client_handle_t client);
 
 #ifdef __cplusplus
 }
