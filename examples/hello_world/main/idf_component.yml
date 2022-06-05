@@ -1,3 +1,4 @@
+---
 ## IDF Component Manager Manifest File
 dependencies:
   esp_websocket_client:
