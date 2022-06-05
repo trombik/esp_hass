@@ -25,14 +25,15 @@
  * otherwise, older esp-idf builds fail.
  */
 
+#include <cJSON.h>
 #include <esp_crt_bundle.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
 #include <esp_wifi.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <freertos/queue.h>
+#include <freertos/task.h>
 #include <nvs_flash.h>
 #include <stdio.h>
 
@@ -42,6 +43,9 @@
 #define WIFI_FAIL_BIT BIT1
 #define EXAMPLE_ESP_MAXIMUM_RETRY (5)
 #define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+#define DEFAULT_TASK_STACK_SIZE_BYTE (4 * 1024)
+#define TASK_STACK_SIZE_BYTE (DEFAULT_TASK_STACK_SIZE_BYTE * 5)
+#define MESSAGE_QUEUE_LEN (5)
 
 static const char *TAG = "example";
 static EventGroupHandle_t s_wifi_event_group;
@@ -138,15 +142,19 @@ wifi_init()
 void
 app_main(void)
 {
+	bool is_test_failed = true;
+	int message_queue_len = MESSAGE_QUEUE_LEN;
+	uint32_t initial_heep_size, current_heep_size;
+	char *json_string = NULL;
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
 	esp_websocket_client_config_t ws_config = { 0 };
-	int message_queue_len = 5;
+	esp_hass_message_t *msg = NULL;
 	QueueHandle_t message_queue;
-	esp_hass_message_t msg;
 
 	/* increase log level in esp_hass component only for debugging */
 	esp_log_level_set("esp_hass", ESP_LOG_DEBUG);
+	esp_log_level_set("esp_hass:parser", ESP_LOG_DEBUG);
 	ws_config.uri = CONFIG_HASS_URI;
 
 /* version 5.x uses my fork with a fix to crt_bundle_attach, but older
@@ -160,8 +168,8 @@ app_main(void)
 	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
 #endif
 
-	/* double the default task_stack size to enable debug log */
-	ws_config.task_stack = (4 * 1024) * 2;
+	/* increase the default task_stack size to enable debug log */
+	ws_config.task_stack = TASK_STACK_SIZE_BYTE;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 	/* set timeouts here to surpress warnings from WEBSOCKET_CLIENT */
@@ -175,10 +183,16 @@ app_main(void)
 		.ws_config = &ws_config,
 	};
 
-	message_queue = xQueueCreate(message_queue_len, sizeof(esp_hass_message_t));
+	message_queue = xQueueCreate(message_queue_len,
+	    sizeof(struct esp_hass_message_t *));
 	if (message_queue == NULL) {
 		ESP_LOGE(TAG, "xQueueCreate(): Out of memory");
 		goto init_fail;
+	}
+	msg = calloc(1, sizeof(esp_hass_message_t));
+	if (msg == NULL) {
+		ESP_LOGE(TAG, "Out of memory");
+		goto fail;
 	}
 
 	/* Initialize NVS */
@@ -216,30 +230,80 @@ app_main(void)
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	} while (!esp_hass_client_is_connected(client));
 
+	ESP_LOGI(TAG, "Waiting for client to be authenticated");
+	do {
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+	} while (!esp_hass_client_is_authenticated(client));
+
+	/* ha_version is available after authentication attempt */
+	ESP_LOGI(TAG, "Home assisstant version: %s",
+	    esp_hass_client_get_ha_version(client));
+
 	ESP_LOGI(TAG, "Subscribe to all events");
 	err = esp_hass_client_subscribe_events(client, NULL);
 	if (err != ESP_OK) {
 		goto fail;
 	}
+	/* wait the result of subscribe_events command */
+	xQueueReceive(message_queue, &msg, portMAX_DELAY);
+	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
+		ESP_LOGE(TAG,
+		    "Unexpected response from the server: result type: %d",
+		    msg->type);
+		goto fail;
+	}
+	if (msg->success) {
+		ESP_LOGI(TAG, "Subscription successful");
+	} else {
+		ESP_LOGE(TAG, "Subscription unsuccessful");
+		goto fail;
+	}
 
+	/* when done with a message, destroy it with esp_hass_message_destroy()
+	 */
+	esp_hass_message_destroy(msg);
+
+	/* listen to messages, and print received messages. */
 	ESP_LOGI(TAG, "Starting loop");
-	while (1) {
-		if (xQueueReceive(message_queue, &msg, portMAX_DELAY) != pdTRUE) {
-			ESP_LOGE(TAG, "xQueueReceive(): failed");
-		} else {
-			ESP_LOGI(TAG, "Message type: %d", msg.type);
+	initial_heep_size = esp_get_free_heap_size();
+	for (int i = 1; i <= 200; i++) {
+		ESP_LOGI(TAG, "free_heep: %d", esp_get_free_heap_size());
+		if (xQueueReceive(message_queue, &msg, portMAX_DELAY) ==
+		    pdTRUE) {
+			ESP_LOGI(TAG, "Message type: %d", msg->type);
+			json_string = cJSON_Print(msg->json);
+			if (json_string == NULL) {
+				ESP_LOGE(TAG, "cJSON_Print()");
+				goto fail;
+			}
+			ESP_LOGV(TAG, "Message json: %s",
+			    cJSON_Print(msg->json));
+			free(json_string);
+			json_string = NULL;
+			esp_hass_message_destroy(msg);
+			msg = NULL;
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
+	current_heep_size = esp_get_free_heap_size();
+	ESP_LOGI(TAG,
+	    "initial_heep_size %d, current heep size %d, difference %d",
+	    initial_heep_size, current_heep_size,
+	    initial_heep_size - current_heep_size);
 
+	is_test_failed = false;
+fail:
 	ESP_LOGI(TAG, "Stopping hass client");
 	err = esp_hass_client_stop(client);
 	if (err != ESP_OK) {
 		ESP_LOGE(TAG, "esp_hass_client_stop(): %s",
 		    esp_err_to_name(err));
 	}
-fail:
 start_fail:
+	if (json_string != NULL) {
+		free(json_string);
+		json_string = NULL;
+	}
 	ESP_LOGI(TAG, "Destroying hass client");
 	err = esp_hass_destroy(client);
 	if (err != ESP_OK) {
@@ -247,10 +311,14 @@ start_fail:
 	}
 
 init_fail:
+	if (msg != NULL) {
+		esp_hass_message_destroy(msg);
+	}
 	if (message_queue != NULL) {
 		vQueueDelete(message_queue);
 	}
-	ESP_LOGI(TAG, "The example terminated with an error. Please reboot.");
+	ESP_LOGI(TAG, "The example terminated %s error. Please reboot.",
+	    is_test_failed ? "with" : "without");
 	while (1) {
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
