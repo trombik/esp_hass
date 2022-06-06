@@ -23,11 +23,11 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
 #include <cJSON.h>
 #include <esp_err.h>
 #include <esp_websocket_client.h>
 #include <freertos/queue.h>
+#include <stdbool.h>
 
 /**
  * Home Assistant message types.
@@ -160,7 +160,8 @@ esp_err_t esp_hass_client_stop(esp_hass_client_handle_t client);
 esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client);
 
 /**
- * @brief Perform authentication. See https://developers.home-assistant.io/docs/api/websocket#authentication-phase
+ * @brief Perform authentication. See
+ * https://developers.home-assistant.io/docs/api/websocket#authentication-phase
  *
  * @param[in] client The hass client
  *
