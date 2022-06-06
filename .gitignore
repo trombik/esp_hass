@@ -5,3 +5,6 @@ build
 **/managed_components
 *.swp
 .tox
+
+doc/_build
+doc/_static
