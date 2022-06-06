@@ -1,0 +1,29 @@
+---
+name: Build doc
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+jobs:
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the SDK
+        uses: actions/checkout@v3
+        with:
+          repository: espressif/esp-idf
+          path: esp-idf
+          submodules: recursive
+          ref: master
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox
+
+      - name: Build documentation
+        run: |
+          export IDF_PATH=${PWD}/esp-idf
+          export MAKE=make
+          tox -e build_docs
