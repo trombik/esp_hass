@@ -18,8 +18,6 @@ import sys
 import clang.cindex
 if os.uname().sysname == 'FreeBSD':
   clang.cindex.Config.set_library_file('/usr/local/llvm13/lib/libclang.so.13')
-else:
-  clang.cindex.Config.set_library_file('/lib/x86_64-linux-gnu/libclang.so')
 
 # -- Project information -----------------------------------------------------
 

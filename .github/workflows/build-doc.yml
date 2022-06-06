@@ -40,8 +40,14 @@ jobs:
           version: "13.0.1"
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
 
+      - name: Symlink libclang.so (Linux)
+        if: contains(matrix.os, 'ubuntu')
+        working-directory: ${{ env.LLVM_PATH }}/lib
+        run: sudo ln -s libclang-13.so.1 /lib/x86_64-linux-gnu/libclang.so
+
       - name: Build documentation
         run: |
+          ls -al ${{ env.LLVM_PATH }}/lib
           export IDF_PATH=${PWD}/esp-idf
           export MAKE=make
           tox -e build_docs
