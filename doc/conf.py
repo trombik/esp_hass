@@ -16,7 +16,10 @@ import sys
 
 # on FreeBSD, the name is not `libclang-13.so`, which is used by `clang` python module
 import clang.cindex
-clang.cindex.Config.set_library_file('/usr/local/llvm13/lib/libclang.so.13')
+if os.uname().sysname == 'FreeBSD':
+  clang.cindex.Config.set_library_file('/usr/local/llvm13/lib/libclang.so.13')
+else:
+  clang.cindex.Config.set_library_file('/lib/x86_64-linux-gnu/libclang.so')
 
 # -- Project information -----------------------------------------------------
 
