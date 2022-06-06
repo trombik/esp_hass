@@ -1,0 +1,19 @@
+yamllint==1.26.3
+# for C project support
+sphinx-c-autodoc==1.0.0
+
+# required by sphinx-c-autodoc
+# clang version is 13 on my machine
+# see https://pypi.org/project/clang/#history
+clang==13.0.1
+beautifulsoup4==4.11.1
+
+# sphinx-c-autodoc does not support 5.x
+sphinx<5
+
+# for html_theme in conf.py
+sphinx_rtd_theme
+
+# for .md
+myst-parser
+mkdocs

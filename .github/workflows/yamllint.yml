@@ -1,0 +1,42 @@
+---
+name: yamllint
+on:
+  push:
+  pull_request:
+
+jobs:
+  yamllint:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - 3.8
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+
+      - name: Cache tox environment
+        uses: actions/cache@v3
+        with:
+          path: .tox/python
+          key: ${{ runner.os }}-tox-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-tox-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox
+
+      - name: Test with tox
+        run: |
+          export MAKE=make
+          export IDF_PATH='CHANGEME_LATER'
+          tox -e yamllint

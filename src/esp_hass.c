@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <cJSON.h>
 #include <esp_crt_bundle.h>
+#include <esp_err.h>
 #include <esp_event.h>
 #include <esp_hass.h>
 #include <esp_log.h>
@@ -35,6 +36,7 @@
 #include <esp_websocket_client.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
+#include <stdbool.h>
 
 #include "parser.h"
 

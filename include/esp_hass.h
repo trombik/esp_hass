@@ -27,6 +27,7 @@ extern "C" {
 #include <esp_err.h>
 #include <esp_websocket_client.h>
 #include <freertos/queue.h>
+#include <stdbool.h>
 
 /**
  * Home Assistant message types.
@@ -94,6 +95,9 @@ typedef struct {
 
 } esp_hass_config_t;
 
+/**
+ * The esp_hass client handle
+ */
 typedef struct esp_hass_client *esp_hass_client_handle_t;
 
 /**
@@ -156,7 +160,7 @@ esp_err_t esp_hass_client_stop(esp_hass_client_handle_t client);
 esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client);
 
 /**
- * @brief Perform authentication. See:
+ * @brief Perform authentication. See
  * https://developers.home-assistant.io/docs/api/websocket#authentication-phase
  *
  * @param[in] client The hass client
@@ -166,7 +170,6 @@ esp_err_t esp_hass_client_ping(esp_hass_client_handle_t client);
  *   - ESP_FAIL if failed
  *   - ESP_ERR_INVALID_ARG if client is NULL
  */
-
 esp_err_t esp_hass_client_auth(esp_hass_client_handle_t client);
 
 /**

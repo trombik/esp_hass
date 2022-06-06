@@ -1,0 +1,48 @@
+---
+name: Build doc
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+jobs:
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Checkout the SDK
+        uses: actions/checkout@v3
+        with:
+          repository: espressif/esp-idf
+          path: esp-idf
+          submodules: recursive
+          ref: master
+
+      - name: Install tox
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install tox
+
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v2
+        with:
+          path: |
+            C:/Program Files/LLVM
+            ./llvm
+          key: llvm-13.0.1
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "13.0.1"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
+      - name: Build documentation
+        run: |
+          export CLANG_LIB_FILE=${{ env.LLVM_PATH }}/lib/libclang.so.13
+          export IDF_PATH=${PWD}/esp-idf
+          export MAKE=make
+          tox -e build_docs
