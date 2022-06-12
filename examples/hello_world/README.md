@@ -7,7 +7,8 @@
 1. Starts `esp_hass_client`, which automatically establishes WebSocket
    connection to `EXAMPLE_HASS_URI`, and performs authentication
 1. Subscribes to all events
-1. Calls a service, and print the result
+1. Calls a service, and print the result (modify entity ID, domain, and
+   service to call by `make menuconfig`)
 1. Prints events received from the Home Assistant
 1. Cleans up and exits the test after the loop
 
