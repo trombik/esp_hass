@@ -160,9 +160,9 @@ app_main(void)
 	 *
 	 * the service is called once before the loop.
 	 */
-	char *entity_id = "switch.relay_backgarden_switch_light_1";
-	char *domain = "switch";
-	char *service = "toggle";
+	char *entity_id = CONFIG_EXAMPLE_CALL_SERVICE_ENTITI_ID;
+	char *domain = CONFIG_EXAMPLE_CALL_SERVICE_DOMAIN;
+	char *service = CONFIG_EXAMPLE_CALL_SERVICE;
 
 	/* increase log level in esp_hass component only for debugging */
 	esp_log_level_set("esp_hass", ESP_LOG_VERBOSE);

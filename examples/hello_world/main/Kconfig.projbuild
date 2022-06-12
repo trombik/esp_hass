@@ -31,4 +31,22 @@ menu "Example Configuration"
         help
             Access token. Generate one from your account profile page. Click
             "CREATE TOKEN" under "Long-Lived Access Tokens".
+
+    config EXAMPLE_CALL_SERVICE_ENTITI_ID
+        string "The entity ID to call the service"
+        default "switch.relay_backgarden_switch_light_1"
+        help
+            The entity ID of the service to call.
+
+    config EXAMPLE_CALL_SERVICE_DOMAIN
+        string "Domain of the service to call"
+        default "switch"
+        help
+            The domain of the service to call.
+
+    config EXAMPLE_CALL_SERVICE
+        string "The service to call"
+        default "toggle"
+        help
+            The service to call.
 endmenu
