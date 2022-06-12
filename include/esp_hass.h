@@ -112,6 +112,8 @@ typedef struct {
 				  from the server. */
 	const esp_websocket_client_config_t
 	    *ws_config; /*!< configuration of esp_websocket_client */
+	const QueueHandle_t result_queue; /*!< queue handle for results */
+	const QueueHandle_t event_queue;  /*!< queue handle for events */
 
 } esp_hass_config_t;
 
@@ -125,16 +127,13 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  * `esp_hass_*` function.
  *
  * @param[in] config Configuration.
- * @param[in] event_queue Queue handle for received hass event messages.
- * @param[in] result_queue Queue handle for received hass result messages.
  *
  * @return
  *	- pointer to hass client handle. This handle must be passed to other
  *	`esp_hass_*` functions.
  *	- NULL if failed.
  */
-esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config,
-    QueueHandle_t event_queue, QueueHandle_t result_queue);
+esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config);
 
 /**
  * @brief Destroy hass client. When the client is not needed, this function

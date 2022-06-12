@@ -189,12 +189,6 @@ app_main(void)
 	ws_config.network_timeout_ms = 10000;
 #endif
 
-	esp_hass_config_t config = {
-		.access_token = CONFIG_EXAMPLE_HASS_ACCESS_TOKEN,
-		.timeout_sec = 30,
-		.ws_config = &ws_config,
-	};
-
 	event_queue = xQueueCreate(event_queue_len,
 	    sizeof(struct esp_hass_message_t *));
 	if (event_queue == NULL) {
@@ -207,6 +201,14 @@ app_main(void)
 		ESP_LOGE(TAG, "xQueueCreate(): Out of memory");
 		goto init_fail;
 	}
+
+	esp_hass_config_t config = {
+		.access_token = CONFIG_EXAMPLE_HASS_ACCESS_TOKEN,
+		.timeout_sec = 30,
+		.ws_config = &ws_config,
+		.event_queue = event_queue,
+		.result_queue = result_queue,
+	};
 	msg = calloc(1, sizeof(esp_hass_message_t));
 	if (msg == NULL) {
 		ESP_LOGE(TAG, "Out of memory");
@@ -229,7 +231,7 @@ app_main(void)
 	}
 
 	ESP_LOGI(TAG, "Initializing hass client");
-	client = esp_hass_init(&config, event_queue, result_queue);
+	client = esp_hass_init(&config);
 	if (client == NULL) {
 		ESP_LOGE(TAG, "esp_hass_init(): failed");
 		goto init_fail;

@@ -258,8 +258,7 @@ esp_hass_hello_world()
 }
 
 esp_hass_client_handle_t
-esp_hass_init(esp_hass_config_t *config, QueueHandle_t event_queue,
-    QueueHandle_t result_queue)
+esp_hass_init(esp_hass_config_t *config)
 {
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t hass_client = NULL;
@@ -285,8 +284,8 @@ esp_hass_init(esp_hass_config_t *config, QueueHandle_t event_queue,
 	hass_client->config.access_token = config->access_token;
 	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
-	hass_client->event_queue = event_queue;
-	hass_client->result_queue = result_queue;
+	hass_client->event_queue = config->event_queue;
+	hass_client->result_queue = config->result_queue;
 	hass_client->is_authenticated = false;
 	hass_client->json = NULL;
 	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
