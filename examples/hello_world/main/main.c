@@ -371,12 +371,14 @@ app_main(void)
 			}
 			ESP_LOGV(TAG, "Message json: %s", json_string);
 			free(json_string);
+			json_string = NULL;
 			err = esp_hass_message_destroy(msg);
 			if (err != ESP_OK) {
 				ESP_LOGE(TAG, "esp_hass_message_destroy: `%s`",
 				    esp_err_to_name(err));
 				goto fail;
 			}
+			msg = NULL;
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
