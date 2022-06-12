@@ -9,7 +9,7 @@
 1. Subscribes to all events
 1. Calls a service, and print the result (modify entity ID, domain, and
    service to call by `make menuconfig`)
-1. Prints events received from the Home Assistant
+1. Prints events received from the Home Assistant in a loop
 1. Cleans up and exits the test after the loop
 
 ## Requirements
