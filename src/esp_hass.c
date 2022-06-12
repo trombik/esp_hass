@@ -436,7 +436,7 @@ esp_hass_create_message_auth(esp_hass_client_handle_t client)
 		goto fail;
 	}
 	if (cJSON_AddStringToObject(client->json, "access_token",
-		CONFIG_HASS_ACCESS_TOKEN) == NULL) {
+		client->config.access_token) == NULL) {
 		ESP_LOGE(TAG, "cJSON_AddStringToObject(): type access_token");
 		err = ESP_FAIL;
 		goto fail;

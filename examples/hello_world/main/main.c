@@ -167,7 +167,7 @@ app_main(void)
 	/* increase log level in esp_hass component only for debugging */
 	esp_log_level_set("esp_hass", ESP_LOG_VERBOSE);
 	esp_log_level_set("esp_hass:parser", ESP_LOG_VERBOSE);
-	ws_config.uri = CONFIG_HASS_URI;
+	ws_config.uri = CONFIG_EXAMPLE_HASS_URI;
 
 /* version 5.x uses my fork with a fix to crt_bundle_attach, but older
  * versions do not have the fix.
@@ -190,7 +190,7 @@ app_main(void)
 #endif
 
 	esp_hass_config_t config = {
-		.access_token = CONFIG_HASS_ACCESS_TOKEN,
+		.access_token = CONFIG_EXAMPLE_HASS_ACCESS_TOKEN,
 		.timeout_sec = 30,
 		.ws_config = &ws_config,
 	};

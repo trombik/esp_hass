@@ -19,13 +19,13 @@ menu "Example Configuration"
             Set the Maximum retry to avoid station reconnecting to the AP
             unlimited when the AP is really inexistent.
 
-    config HASS_URI
+    config EXAMPLE_HASS_URI
         string "Home Assistant WebSocket URI"
         default "wss://hass.example.org/api/websocket"
         help
-            WebSocket URI
+            WebSocket URI of the Home Assistant
 
-    config HASS_ACCESS_TOKEN
+    config EXAMPLE_HASS_ACCESS_TOKEN
         string "Access token"
         default ""
         help
