@@ -105,7 +105,8 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  * `esp_hass_*` function.
  *
  * @param[in] config Configuration.
- * @param[in] queue Queue handle for received hass messages.
+ * @param[in] event_queue Queue handle for received hass event messages.
+ * @param[in] result_queue Queue handle for received hass result messages.
  *
  * @return
  *	- pointer to hass client handle. This handle must be passed to other
@@ -113,7 +114,7 @@ typedef struct esp_hass_client *esp_hass_client_handle_t;
  *	- NULL if failed.
  */
 esp_hass_client_handle_t esp_hass_init(esp_hass_config_t *config,
-    QueueHandle_t queue);
+    QueueHandle_t event_queue, QueueHandle_t result_queue);
 
 /**
  * @brief Destroy hass client. When the client is not needed, this function
@@ -225,6 +226,18 @@ esp_err_t esp_hass_message_destroy(esp_hass_message_t *msg);
  * @return ha_version string
  */
 char *esp_hass_client_get_ha_version(esp_hass_client_handle_t client);
+
+/**
+ * @brief Send a JSON message.
+ *
+ * @param[in] client The hass client
+ * @param[in] json cJSON object
+ *
+ * @return
+ * - ESP_OK if success
+ */
+esp_err_t esp_hass_send_message_json(esp_hass_client_handle_t client,
+    cJSON *json);
 
 #ifdef __cplusplus
 }

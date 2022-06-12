@@ -62,7 +62,8 @@ struct esp_hass_client {
 	bool is_authenticated;
 	char ha_version[ESP_HASS_VERSION_STRING_MAX_LEN];
 	cJSON *json;
-	QueueHandle_t queue;
+	QueueHandle_t event_queue;
+	QueueHandle_t result_queue;
 };
 
 static void
@@ -105,22 +106,45 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 			ESP_LOGE(TAG, "esp_hass_client_auth(): %s",
 			    esp_err_to_name(err));
 		}
-		esp_hass_message_destroy(msg);
+		err = esp_hass_message_destroy(msg);
+		if (err != ESP_OK) {
+			ESP_LOGE(TAG, "esp_hass_message_destroy(): %s",
+			    esp_err_to_name(err));
+		}
 		break;
 	case HASS_MESSAGE_TYPE_AUTH_OK:
 		ESP_LOGI(TAG, "Authentication successful");
 		client->is_authenticated = true;
-		esp_hass_message_destroy(msg);
+		err = esp_hass_message_destroy(msg);
+		if (err != ESP_OK) {
+			ESP_LOGE(TAG, "esp_hass_message_destroy(): %s",
+			    esp_err_to_name(err));
+		}
 		break;
-	case HASS_MESSAGE_TYPE_PONG:
 	case HASS_MESSAGE_TYPE_RESULT:
-	case HASS_MESSAGE_TYPE_EVENT:
-	default:
-		rtos_err = xQueueSend(client->queue, &msg,
+		rtos_err = xQueueSend(client->result_queue, &msg,
 		    ESP_HASS_QUEUE_SEND_WAIT_MS / portTICK_PERIOD_MS);
 		if (rtos_err != pdTRUE) {
 			ESP_LOGW(TAG, "xQueueSend(): failed");
-			esp_hass_message_destroy(msg);
+			err = esp_hass_message_destroy(msg);
+			if (err != ESP_OK) {
+				ESP_LOGE(TAG, "esp_hass_message_destroy(): %s",
+				    esp_err_to_name(err));
+			}
+		}
+		break;
+	case HASS_MESSAGE_TYPE_PONG:
+	case HASS_MESSAGE_TYPE_EVENT:
+	default:
+		rtos_err = xQueueSend(client->event_queue, &msg,
+		    ESP_HASS_QUEUE_SEND_WAIT_MS / portTICK_PERIOD_MS);
+		if (rtos_err != pdTRUE) {
+			ESP_LOGW(TAG, "xQueueSend(): failed");
+			err = esp_hass_message_destroy(msg);
+			if (err != ESP_OK) {
+				ESP_LOGE(TAG, "esp_hass_message_destroy(): %s",
+				    esp_err_to_name(err));
+			}
 		}
 	}
 }
@@ -234,7 +258,8 @@ esp_hass_hello_world()
 }
 
 esp_hass_client_handle_t
-esp_hass_init(esp_hass_config_t *config, QueueHandle_t queue)
+esp_hass_init(esp_hass_config_t *config, QueueHandle_t event_queue,
+    QueueHandle_t result_queue)
 {
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t hass_client = NULL;
@@ -260,7 +285,8 @@ esp_hass_init(esp_hass_config_t *config, QueueHandle_t queue)
 	hass_client->config.access_token = config->access_token;
 	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
-	hass_client->queue = queue;
+	hass_client->event_queue = event_queue;
+	hass_client->result_queue = result_queue;
 	hass_client->is_authenticated = false;
 	hass_client->json = NULL;
 	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
@@ -606,7 +632,6 @@ esp_hass_message_destroy(esp_hass_message_t *msg)
 		err = ESP_ERR_INVALID_ARG;
 		goto fail;
 	}
-
 	if (msg->json != NULL) {
 		cJSON_Delete(msg->json);
 		msg->json = NULL;
@@ -615,5 +640,52 @@ esp_hass_message_destroy(esp_hass_message_t *msg)
 	msg = NULL;
 	err = ESP_OK;
 fail:
+	return err;
+}
+
+esp_err_t
+esp_hass_send_message_json(esp_hass_client_handle_t client, cJSON *json)
+{
+	int length, json_string_length;
+	esp_err_t err = ESP_FAIL;
+	char *json_string = NULL;
+
+	if (client == NULL) {
+		err = ESP_ERR_INVALID_ARG;
+		goto fail;
+	}
+
+	if (cJSON_AddNumberToObject(json, "id", ++client->message_id) == NULL) {
+		err = ESP_FAIL;
+		goto fail;
+	}
+
+	json_string = cJSON_Print(json);
+	if (json_string == NULL) {
+		ESP_LOGE(TAG, "cJSON_Print(): failed");
+		err = ESP_FAIL;
+		goto fail;
+	}
+	ESP_LOGI(TAG, "Sending message id: %d", client->message_id);
+	json_string_length = strlen(json_string);
+	length = esp_websocket_client_send_text(client->ws_client_handle,
+	    json_string, json_string_length, portMAX_DELAY);
+	if (length < 0) {
+		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
+		err = ESP_FAIL;
+		goto fail;
+	} else if (json_string_length != length) {
+		ESP_LOGE(TAG,
+		    "esp_websocket_client_send_text(): failed: data: %d bytes, data actually sent %d bytes",
+		    json_string_length, length);
+		err = ESP_FAIL;
+		goto fail;
+	}
+	err = ESP_OK;
+fail:
+	if (json_string != NULL) {
+		free(json_string);
+		json_string = NULL;
+	}
 	return err;
 }
