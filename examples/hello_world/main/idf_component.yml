@@ -4,7 +4,7 @@ dependencies:
   esp_websocket_client:
     path: components/esp_websocket_client
     git: "https://github.com/trombik/esp-protocols.git"
-    version: feat-ca-bundle
+    version: master
     rules:
       # esp-idf 5.x does not include esp_websocket_client in it. in others, it
       # is included.

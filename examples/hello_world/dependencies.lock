@@ -1,16 +1,16 @@
 dependencies:
   esp_websocket_client:
-    component_hash: ec69874d022d6666fdbb06d45558cef029b7fccff49b02a320eef8da13357bd7
+    component_hash: bb420aebd2b07fa1aa0cc4a7dbf5db6d3635dc3d45ca6f59ed186cb2d9b2eef2
     source:
       git: https://github.com/trombik/esp-protocols.git
       path: components/esp_websocket_client
       type: git
-    version: d56b5d90ea8011d55f51faa16110be1d13ffaa98
+    version: ebf122bd36d9bbaaef8c2d1a23f1fa938946ab0b
   idf:
     component_hash: null
     source:
       type: idf
     version: 5.0.0
-manifest_hash: 8f05bfed467a091f5b31a43393e243f788512d5b0dc23f1e37bf1204e4cb81a0
+manifest_hash: 3ac0ccf2f4c4aa57b380a68b89703eaadd393e1196a60985abe45a08eae2f545
 target: esp32
 version: 1.0.0
