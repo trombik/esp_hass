@@ -143,18 +143,30 @@ void
 app_main(void)
 {
 	bool is_test_failed = true;
-	int message_queue_len = MESSAGE_QUEUE_LEN;
+	int event_queue_len = MESSAGE_QUEUE_LEN;
+	int result_queue_len = MESSAGE_QUEUE_LEN;
 	uint32_t initial_heep_size, current_heep_size;
 	char *json_string = NULL;
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
 	esp_websocket_client_config_t ws_config = { 0 };
 	esp_hass_message_t *msg = NULL;
-	QueueHandle_t message_queue;
+	QueueHandle_t event_queue = NULL;
+	QueueHandle_t result_queue = NULL;
+	cJSON *json = NULL;
+	cJSON *target = NULL;
+
+	/* define your domain, entity_id, and service here.
+	 *
+	 * the service is called once before the loop.
+	 */
+	char *entity_id = "switch.relay_backgarden_switch_light_1";
+	char *domain = "switch";
+	char *service = "toggle";
 
 	/* increase log level in esp_hass component only for debugging */
-	esp_log_level_set("esp_hass", ESP_LOG_DEBUG);
-	esp_log_level_set("esp_hass:parser", ESP_LOG_DEBUG);
+	esp_log_level_set("esp_hass", ESP_LOG_VERBOSE);
+	esp_log_level_set("esp_hass:parser", ESP_LOG_VERBOSE);
 	ws_config.uri = CONFIG_HASS_URI;
 
 /* version 5.x uses my fork with a fix to crt_bundle_attach, but older
@@ -183,9 +195,15 @@ app_main(void)
 		.ws_config = &ws_config,
 	};
 
-	message_queue = xQueueCreate(message_queue_len,
+	event_queue = xQueueCreate(event_queue_len,
 	    sizeof(struct esp_hass_message_t *));
-	if (message_queue == NULL) {
+	if (event_queue == NULL) {
+		ESP_LOGE(TAG, "xQueueCreate(): Out of memory");
+		goto init_fail;
+	}
+	result_queue = xQueueCreate(result_queue_len,
+	    sizeof(struct esp_hass_message_t *));
+	if (result_queue == NULL) {
 		ESP_LOGE(TAG, "xQueueCreate(): Out of memory");
 		goto init_fail;
 	}
@@ -211,7 +229,7 @@ app_main(void)
 	}
 
 	ESP_LOGI(TAG, "Initializing hass client");
-	client = esp_hass_init(&config, message_queue);
+	client = esp_hass_init(&config, event_queue, result_queue);
 	if (client == NULL) {
 		ESP_LOGE(TAG, "esp_hass_init(): failed");
 		goto init_fail;
@@ -245,7 +263,7 @@ app_main(void)
 		goto fail;
 	}
 	/* wait the result of subscribe_events command */
-	xQueueReceive(message_queue, &msg, portMAX_DELAY);
+	xQueueReceive(result_queue, &msg, portMAX_DELAY);
 	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
 		ESP_LOGE(TAG,
 		    "Unexpected response from the server: result type: %d",
@@ -263,25 +281,102 @@ app_main(void)
 	 */
 	esp_hass_message_destroy(msg);
 
-	/* listen to messages, and print received messages. */
+	/* call a service, receive the result */
+	ESP_LOGI(TAG, "Call a service");
+
+	json = cJSON_CreateObject();
+	if (json == NULL) {
+		ESP_LOGE(TAG, "cJSON_CreateObject()");
+		goto fail;
+	}
+	if (cJSON_AddStringToObject(json, "type", "call_service") == NULL) {
+		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
+		goto fail;
+	}
+	if (cJSON_AddStringToObject(json, "domain", domain) == NULL) {
+		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
+		goto fail;
+	}
+	if (cJSON_AddStringToObject(json, "service", service) == NULL) {
+		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
+		goto fail;
+	}
+
+	target = cJSON_CreateObject();
+	if (target == NULL) {
+		ESP_LOGE(TAG, "cJSON_CreateObject()");
+		goto fail;
+	}
+	if (cJSON_AddStringToObject(target, "entity_id", entity_id) == NULL) {
+		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
+		goto fail;
+	}
+	if (cJSON_AddItemToObject(json, "target", target) != true) {
+		ESP_LOGE(TAG, "cJSON_AddItemToObject()");
+		goto fail;
+	}
+
+	err = esp_hass_send_message_json(client, json);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_hass_send_message_json()");
+		goto fail;
+	}
+
+	/* remember to cJSON_Delete() all cJSON objects after use. `target` is
+	 * not cJSON_Delete()ed here, because it was added to json, and when
+	 * you cJSON_Delete(json), `target` is also deleted.
+	 */
+	cJSON_Delete(json);
+	xQueueReceive(result_queue, &msg, portMAX_DELAY);
+	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
+		ESP_LOGE(TAG,
+		    "Unexpected response from the server: result type: %d",
+		    msg->type);
+		goto fail;
+	}
+	if (msg->success) {
+		ESP_LOGI(TAG, "relay.toggle successful");
+	} else {
+		cJSON *error;
+		cJSON *error_message;
+		error = cJSON_GetObjectItemCaseSensitive(msg->json, "error");
+		error_message = cJSON_GetObjectItemCaseSensitive(error,
+		    "message");
+		if (cJSON_IsString(error_message) &&
+		    (error_message->valuestring != NULL)) {
+			ESP_LOGE(TAG, "relay.toggle unsuccessful: %s",
+			    error_message->valuestring);
+		}
+		goto fail;
+	}
+	err = esp_hass_message_destroy(msg);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_hass_message_destroy: `%s`",
+		    esp_err_to_name(err));
+		goto fail;
+	}
+	msg = NULL;
+
+	/* listen to event messages, and print received messages. */
 	ESP_LOGI(TAG, "Starting loop");
 	initial_heep_size = esp_get_free_heap_size();
 	for (int i = 1; i <= 200; i++) {
 		ESP_LOGI(TAG, "free_heep: %d", esp_get_free_heap_size());
-		if (xQueueReceive(message_queue, &msg, portMAX_DELAY) ==
-		    pdTRUE) {
+		if (xQueueReceive(event_queue, &msg, portMAX_DELAY) == pdTRUE) {
 			ESP_LOGI(TAG, "Message type: %d", msg->type);
 			json_string = cJSON_Print(msg->json);
 			if (json_string == NULL) {
 				ESP_LOGE(TAG, "cJSON_Print()");
 				goto fail;
 			}
-			ESP_LOGV(TAG, "Message json: %s",
-			    cJSON_Print(msg->json));
+			ESP_LOGV(TAG, "Message json: %s", json_string);
 			free(json_string);
-			json_string = NULL;
-			esp_hass_message_destroy(msg);
-			msg = NULL;
+			err = esp_hass_message_destroy(msg);
+			if (err != ESP_OK) {
+				ESP_LOGE(TAG, "esp_hass_message_destroy: `%s`",
+				    esp_err_to_name(err));
+				goto fail;
+			}
 		}
 		vTaskDelay(10 / portTICK_PERIOD_MS);
 	}
@@ -314,8 +409,11 @@ init_fail:
 	if (msg != NULL) {
 		esp_hass_message_destroy(msg);
 	}
-	if (message_queue != NULL) {
-		vQueueDelete(message_queue);
+	if (event_queue != NULL) {
+		vQueueDelete(event_queue);
+	}
+	if (result_queue != NULL) {
+		vQueueDelete(result_queue);
 	}
 	ESP_LOGI(TAG, "The example terminated %s error. Please reboot.",
 	    is_test_failed ? "with" : "without");
