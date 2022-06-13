@@ -118,6 +118,27 @@ typedef struct {
 } esp_hass_config_t;
 
 /**
+ * esp_hass_call_service configuration. The API accepts more options, but they
+ * are not supported yet.
+ */
+typedef struct {
+	char *domain;		    /*!< domain name */
+	char *service;		    /*!< service name */
+	char *entity_id;	    /*!< entity_id */
+	TickType_t delay;	    /*!< timeout for receiving the result */
+	QueueHandle_t result_queue; /*!< result queue */
+} esp_hass_call_service_config_t;
+
+/**
+ * A macro to initialize esp_hass_call_service_config_t with defaults.
+ */
+#define ESP_HASS_CALL_SERVICE_CONFIG_DEFAULT()                      \
+	{                                                           \
+		.domain = NULL, .service = NULL, .entity_id = NULL, \
+		.delay = portMAX_DELAY, .result_queue = NULL,       \
+	}
+
+/**
  * A macro to initialize esp_hass_config_t with defaults.
  */
 #define ESP_HASS_CONFIG_DEFAULT()                                           \
@@ -267,6 +288,17 @@ char *esp_hass_client_get_ha_version(esp_hass_client_handle_t client);
 esp_err_t esp_hass_send_message_json(esp_hass_client_handle_t client,
     cJSON *json);
 
+/**
+ * @brief Call a service
+ *
+ * @param[in] client The hass client
+ * @param[in] config esp_hass_call_service_config_t
+ *
+ * @return
+ * - ESP_OK if success
+ */
+esp_err_t esp_hass_call_service(esp_hass_client_handle_t client,
+    esp_hass_call_service_config_t *config);
 #ifdef __cplusplus
 }
 #endif
