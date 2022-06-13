@@ -153,8 +153,8 @@ app_main(void)
 	esp_hass_message_t *msg = NULL;
 	QueueHandle_t event_queue = NULL;
 	QueueHandle_t result_queue = NULL;
-	cJSON *json = NULL;
-	cJSON *target = NULL;
+	esp_hass_call_service_config_t call_service_config =
+	    ESP_HASS_CALL_SERVICE_CONFIG_DEFAULT();
 
 	/* define your domain, entity_id, and service here.
 	 *
@@ -288,75 +288,15 @@ app_main(void)
 
 	/* call a service, receive the result */
 	ESP_LOGI(TAG, "Call a service");
+	call_service_config.domain = domain;
+	call_service_config.service = service;
+	call_service_config.entity_id = entity_id;
+	call_service_config.delay = portMAX_DELAY;
+	call_service_config.result_queue = result_queue;
 
-	json = cJSON_CreateObject();
-	if (json == NULL) {
-		ESP_LOGE(TAG, "cJSON_CreateObject()");
-		goto fail;
-	}
-	if (cJSON_AddStringToObject(json, "type", "call_service") == NULL) {
-		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
-		goto fail;
-	}
-	if (cJSON_AddStringToObject(json, "domain", domain) == NULL) {
-		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
-		goto fail;
-	}
-	if (cJSON_AddStringToObject(json, "service", service) == NULL) {
-		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
-		goto fail;
-	}
-
-	target = cJSON_CreateObject();
-	if (target == NULL) {
-		ESP_LOGE(TAG, "cJSON_CreateObject()");
-		goto fail;
-	}
-	if (cJSON_AddStringToObject(target, "entity_id", entity_id) == NULL) {
-		ESP_LOGE(TAG, "cJSON_AddStringToObject()");
-		goto fail;
-	}
-	if (cJSON_AddItemToObject(json, "target", target) != true) {
-		ESP_LOGE(TAG, "cJSON_AddItemToObject()");
-		goto fail;
-	}
-
-	err = esp_hass_send_message_json(client, json);
+	err = esp_hass_call_service(client, &call_service_config);
 	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "esp_hass_send_message_json()");
-		goto fail;
-	}
-
-	/* remember to cJSON_Delete() all cJSON objects after use. `target` is
-	 * not cJSON_Delete()ed here, because it was added to json, and when
-	 * you cJSON_Delete(json), `target` is also deleted.
-	 */
-	cJSON_Delete(json);
-	xQueueReceive(result_queue, &msg, portMAX_DELAY);
-	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
-		ESP_LOGE(TAG,
-		    "Unexpected response from the server: result type: %d",
-		    msg->type);
-		goto fail;
-	}
-	if (msg->success) {
-		ESP_LOGI(TAG, "relay.toggle successful");
-	} else {
-		cJSON *error;
-		cJSON *error_message;
-		error = cJSON_GetObjectItemCaseSensitive(msg->json, "error");
-		error_message = cJSON_GetObjectItemCaseSensitive(error,
-		    "message");
-		if (cJSON_IsString(error_message) &&
-		    (error_message->valuestring != NULL)) {
-			ESP_LOGE(TAG, "relay.toggle unsuccessful: %s",
-			    error_message->valuestring);
-		}
-		goto fail;
-	}
-	err = esp_hass_message_destroy(msg);
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "esp_hass_message_destroy: `%s`",
+		ESP_LOGE(TAG, "esp_hass_call_service: `%s`",
 		    esp_err_to_name(err));
 		goto fail;
 	}
