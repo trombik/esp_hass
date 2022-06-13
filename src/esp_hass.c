@@ -625,8 +625,6 @@ esp_hass_client_get_ha_version(esp_hass_client_handle_t client)
 esp_err_t
 esp_hass_message_destroy(esp_hass_message_t *msg)
 {
-	esp_err_t err = ESP_FAIL;
-
 	if (msg == NULL) {
 		goto success;
 	}
@@ -637,8 +635,7 @@ esp_hass_message_destroy(esp_hass_message_t *msg)
 	free(msg);
 	msg = NULL;
 success:
-	err = ESP_OK;
-	return err;
+	return ESP_OK;
 }
 
 esp_err_t
