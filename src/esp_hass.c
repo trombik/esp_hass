@@ -628,8 +628,7 @@ esp_hass_message_destroy(esp_hass_message_t *msg)
 	esp_err_t err = ESP_FAIL;
 
 	if (msg == NULL) {
-		err = ESP_ERR_INVALID_ARG;
-		goto fail;
+		goto success;
 	}
 	if (msg->json != NULL) {
 		cJSON_Delete(msg->json);
@@ -637,8 +636,8 @@ esp_hass_message_destroy(esp_hass_message_t *msg)
 	}
 	free(msg);
 	msg = NULL;
+success:
 	err = ESP_OK;
-fail:
 	return err;
 }
 

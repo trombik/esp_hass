@@ -118,7 +118,8 @@ typedef struct {
 } esp_hass_config_t;
 
 /**
- * esp_hass_call_service configuration.
+ * esp_hass_call_service configuration. The API accepts more options, but they
+ * are not supported yet.
  */
 typedef struct {
 	char *domain;		    /*!< domain name */
@@ -126,7 +127,6 @@ typedef struct {
 	char *entity_id;	    /*!< entity_id */
 	TickType_t delay;	    /*!< timeout for receiving the result */
 	QueueHandle_t result_queue; /*!< result queue */
-	/* XXX add more options */
 } esp_hass_call_service_config_t;
 
 /**
