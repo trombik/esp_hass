@@ -202,13 +202,16 @@ app_main(void)
 		goto init_fail;
 	}
 
-	esp_hass_config_t config = {
-		.access_token = CONFIG_EXAMPLE_HASS_ACCESS_TOKEN,
-		.timeout_sec = 30,
-		.ws_config = &ws_config,
-		.event_queue = event_queue,
-		.result_queue = result_queue,
-	};
+	/* use ESP_HASS_CONFIG_DEFAULT() macro to initialize
+	 * esp_hass_config_t for forward compatibiity.
+	 */
+	esp_hass_config_t config = ESP_HASS_CONFIG_DEFAULT();
+	config.access_token = CONFIG_EXAMPLE_HASS_ACCESS_TOKEN;
+	config.timeout_sec = 30;
+	config.ws_config = &ws_config;
+	config.event_queue = event_queue;
+	config.result_queue = result_queue;
+
 	msg = calloc(1, sizeof(esp_hass_message_t));
 	if (msg == NULL) {
 		ESP_LOGE(TAG, "Out of memory");

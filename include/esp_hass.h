@@ -107,15 +107,24 @@ typedef struct {
  * esp_hass configuration
  */
 typedef struct {
-	const char *access_token; /*!< The access token */
-	const int timeout_sec; /*!< Timeout in second when no response is back
-				  from the server. */
-	const esp_websocket_client_config_t
+	char *access_token; /*!< The access token */
+	int timeout_sec;    /*!< Timeout in second when no response is back
+				     from the server. */
+	esp_websocket_client_config_t
 	    *ws_config; /*!< configuration of esp_websocket_client */
-	const QueueHandle_t result_queue; /*!< queue handle for results */
-	const QueueHandle_t event_queue;  /*!< queue handle for events */
+	QueueHandle_t result_queue; /*!< queue handle for results */
+	QueueHandle_t event_queue;  /*!< queue handle for events */
 
 } esp_hass_config_t;
+
+/**
+ * A macro to initialize esp_hass_config_t with defaults.
+ */
+#define ESP_HASS_CONFIG_DEFAULT()                                           \
+	{                                                                   \
+		.access_token = NULL, .timeout_sec = 10, .ws_config = NULL, \
+		.result_queue = NULL, .event_queue = NULL,                  \
+	}
 
 /**
  * The esp_hass client handle
