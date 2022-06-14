@@ -863,7 +863,7 @@ esp_hass_call_service(esp_hass_client_handle_t client,
 		    esp_err_to_name(err));
 		goto fail;
 	}
-	if (xQueueReceive(config->result_queue, &msg, config->delay) !=
+	if (xQueueReceive(client->result_queue, &msg, config->delay) !=
 	    pdTRUE) {
 		ESP_LOGE(TAG, "failed to receive result: timeout");
 		err = ESP_FAIL;

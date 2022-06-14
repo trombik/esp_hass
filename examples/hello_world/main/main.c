@@ -278,7 +278,6 @@ app_main(void)
 	call_service_config.service = service;
 	call_service_config.entity_id = entity_id;
 	call_service_config.delay = portMAX_DELAY;
-	call_service_config.result_queue = result_queue;
 
 	err = esp_hass_call_service(client, &call_service_config);
 	if (err != ESP_OK) {
