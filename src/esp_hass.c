@@ -637,6 +637,7 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 	esp_err_t err = ESP_FAIL;
 	char *json_string = NULL;
 	int length, json_string_length;
+	esp_hass_message_t *msg = NULL;
 
 	if (client == NULL) {
 		err = ESP_ERR_INVALID_ARG;
@@ -671,9 +672,31 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 		err = ESP_FAIL;
 		goto fail;
 	}
-
+	if (xQueueReceive(client->result_queue, &msg, portMAX_DELAY) !=
+	    pdTRUE) {
+		ESP_LOGE(TAG, "xQueueReceive(): timeout");
+		err = ESP_FAIL;
+		goto fail;
+	}
+	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
+		ESP_LOGE(TAG,
+		    "Unexpected response from the server: result type: %d",
+		    msg->type);
+		err = ESP_FAIL;
+		goto fail;
+	}
+	if (msg->success) {
+		ESP_LOGI(TAG, "subscription command success");
+	} else {
+		ESP_LOGE(TAG, "subscription command failed");
+		err = ESP_FAIL;
+		goto fail;
+	}
 	err = ESP_OK;
 fail:
+	if (msg != NULL) {
+		esp_hass_message_destroy(msg);
+	}
 	if (json_string != NULL) {
 		free(json_string);
 		json_string = NULL;

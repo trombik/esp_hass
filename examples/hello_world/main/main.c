@@ -161,7 +161,6 @@ app_main(void)
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
 	esp_websocket_client_config_t ws_config = { 0 };
-	esp_hass_message_t *msg = NULL;
 	QueueHandle_t event_queue = NULL;
 	QueueHandle_t result_queue = NULL;
 	esp_hass_call_service_config_t call_service_config =
@@ -223,12 +222,6 @@ app_main(void)
 	config.event_queue = event_queue;
 	config.result_queue = result_queue;
 
-	msg = calloc(1, sizeof(esp_hass_message_t));
-	if (msg == NULL) {
-		ESP_LOGE(TAG, "Out of memory");
-		goto fail;
-	}
-
 	/* Initialize NVS */
 	esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -278,24 +271,6 @@ app_main(void)
 	if (err != ESP_OK) {
 		goto fail;
 	}
-	/* wait the result of subscribe_events command */
-	xQueueReceive(result_queue, &msg, portMAX_DELAY);
-	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
-		ESP_LOGE(TAG,
-		    "Unexpected response from the server: result type: %d",
-		    msg->type);
-		goto fail;
-	}
-	if (msg->success) {
-		ESP_LOGI(TAG, "Subscription successful");
-	} else {
-		ESP_LOGE(TAG, "Subscription unsuccessful");
-		goto fail;
-	}
-
-	/* when done with a message, destroy it with esp_hass_message_destroy()
-	 */
-	esp_hass_message_destroy(msg);
 
 	/* call a service, receive the result */
 	ESP_LOGI(TAG, "Call a service");
@@ -363,9 +338,6 @@ start_fail:
 	}
 
 init_fail:
-	if (msg != NULL) {
-		esp_hass_message_destroy(msg);
-	}
 	if (event_queue != NULL) {
 		vQueueDelete(event_queue);
 	}
