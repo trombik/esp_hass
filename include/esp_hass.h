@@ -139,11 +139,10 @@ typedef struct {
  * are not supported yet.
  */
 typedef struct {
-	char *domain;		    /*!< domain name */
-	char *service;		    /*!< service name */
-	char *entity_id;	    /*!< entity_id */
-	TickType_t delay;	    /*!< timeout for receiving the result */
-	QueueHandle_t result_queue; /*!< result queue */
+	char *domain;	  /*!< domain name */
+	char *service;	  /*!< service name */
+	char *entity_id;  /*!< entity_id */
+	TickType_t delay; /*!< timeout for receiving the result */
 } esp_hass_call_service_config_t;
 
 /**
@@ -152,7 +151,7 @@ typedef struct {
 #define ESP_HASS_CALL_SERVICE_CONFIG_DEFAULT()                      \
 	{                                                           \
 		.domain = NULL, .service = NULL, .entity_id = NULL, \
-		.delay = portMAX_DELAY, .result_queue = NULL,       \
+		.delay = portMAX_DELAY,                             \
 	}
 
 /**
