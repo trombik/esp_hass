@@ -44,6 +44,8 @@
 #define ESP_HASS_QUEUE_SEND_WAIT_MS (1000)
 #define ESP_HASS_VERSION_STRING_MAX_LEN (32)
 
+ESP_EVENT_DEFINE_BASE(HASS_EVENTS);
+
 static const char *TAG = "esp_hass";
 
 typedef struct {
@@ -64,6 +66,7 @@ struct esp_hass_client {
 	cJSON *json;
 	QueueHandle_t event_queue;
 	QueueHandle_t result_queue;
+	esp_event_loop_handle_t event_loop_handle;
 };
 
 static void
@@ -251,6 +254,48 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 	}
 }
 
+/*
+ * A task to listen to the event queue. When a message is received, post the
+ * event message to user-defined event handler.
+ */
+static void
+esp_hass_task_event_source(void *args)
+{
+	esp_hass_message_t *msg = NULL;
+	int32_t event_id = 0;
+	esp_err_t err = ESP_FAIL;
+	esp_hass_client_handle_t client = (esp_hass_client_handle_t)args;
+
+	while (1) {
+		if (xQueueReceive(client->event_queue, &msg, portMAX_DELAY) !=
+		    pdTRUE) {
+			ESP_LOGE(TAG, "xQueueReceive():");
+			continue;
+		}
+		event_id++;
+		err = esp_event_post_to(client->event_loop_handle, HASS_EVENTS,
+		    event_id, msg, sizeof(esp_hass_message_t), portMAX_DELAY);
+		if (err != ESP_OK) {
+			ESP_LOGE(TAG, "esp_event_post_to(): %s",
+			    esp_err_to_name(err));
+		}
+		if (msg != NULL) {
+			esp_hass_message_destroy(msg);
+		}
+		vTaskDelay(
+		    pdMS_TO_TICKS(CONFIG_ESP_HASS_TASK_EVENT_SOURCE_DELAY_MS));
+	}
+}
+
+esp_err_t
+esp_hass_event_handler_register(esp_hass_client_handle_t client,
+    esp_event_handler_t callback)
+{
+	return esp_event_handler_instance_register_with(
+	    client->event_loop_handle, HASS_EVENTS, ESP_EVENT_ANY_ID, callback,
+	    (void *)client, NULL);
+}
+
 void
 esp_hass_hello_world()
 {
@@ -320,6 +365,22 @@ esp_hass_init(esp_hass_config_t *config)
 		goto fail;
 	}
 
+	esp_event_loop_args_t loop_args = {
+		.queue_size = CONFIG_ESP_HASS_TASK_EVENT_SOURCE_QUEUE_SIZE,
+		.task_name = "esp_hass_task_event_source",
+		.task_priority = uxTaskPriorityGet(NULL),
+		.task_stack_size = CONFIG_ESP_HASS_TASK_EVENT_SOURCE_STACK_SIZE,
+		.task_core_id = tskNO_AFFINITY
+	};
+
+	err = esp_event_loop_create(&loop_args,
+	    &hass_client->event_loop_handle);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_event_loop_create(): %s",
+		    esp_err_to_name(err));
+		goto fail;
+	}
+
 	return hass_client;
 fail:
 	esp_hass_destroy(hass_client);
@@ -383,6 +444,14 @@ esp_hass_client_start(esp_hass_client_handle_t client)
 	    pdPASS) {
 		ESP_LOGE(TAG, "xTimerStart(): fail");
 		err = ESP_FAIL;
+		goto fail;
+	}
+
+	if (xTaskCreate(esp_hass_task_event_source,
+		"esp_hass_task_event_source",
+		CONFIG_ESP_HASS_TASK_EVENT_SOURCE_STACK_SIZE, client,
+		uxTaskPriorityGet(NULL), NULL) != pdTRUE) {
+		ESP_LOGE(TAG, "xTaskCreate(): Out of memory");
 		goto fail;
 	}
 
