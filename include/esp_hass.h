@@ -19,7 +19,7 @@
  * ESP WebSocket Client.
  *
  * ESP WebSocket Client is a part of `esp-idf` version 4.x. After version 5,
- * it is a part of which is an `esp-idf` component.
+ * it is a `esp-idf` component, not incldued in `esp-idf`.
  *
  * For `esp-idf` version 4.x, see the official documentation at:
  * https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-reference/protocols/esp_websocket_client.html
@@ -27,13 +27,16 @@
  * For `esp-idf` version 5.x and newer, see the official documentation at:
  * https://espressif.github.io/esp-protocols/esp_websocket_client/index.html
  *
- * `esp_hass_client` needs uses two queues for communication; an event message
+ * `esp_hass_client` needs two queues for communication; an event message
  * queue, and an command message queue. The client enqueues event messages from
  * Home Assistant to the event message queue, and command result messages to
  * the command message queue.
  *
  * To receive event messages, the client must send a subscribe command to
  * events.
+ *
+ * Received Home Assistant events are passed to an event handler. You may
+ * provide one to process them.
  */
 
 #if !defined(__ESP_HASS__H__)
