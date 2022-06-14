@@ -110,11 +110,26 @@ typedef struct {
 	char *access_token; /*!< The access token */
 	int timeout_sec;    /*!< Timeout in second when no response is back
 				     from the server. */
+	int command_send_timeout_sec; /*!< Timeout in second when a command is
+					 sent */
+	int result_recv_timeout_sec;  /*!< Timeout in second when a command is
+					 sent, but no response is back from the
+					 server */
 	esp_websocket_client_config_t
 	    *ws_config; /*!< configuration of esp_websocket_client */
 	QueueHandle_t result_queue; /*!< queue handle for results */
 	QueueHandle_t event_queue;  /*!< queue handle for events */
 } esp_hass_config_t;
+
+/**
+ * A macro to initialize esp_hass_config_t with defaults.
+ */
+#define ESP_HASS_CONFIG_DEFAULT()                                              \
+	{                                                                      \
+		.access_token = NULL, .timeout_sec = 10, .ws_config = NULL,    \
+		.result_queue = NULL, .event_queue = NULL,                     \
+		.command_send_timeout_sec = 10, .result_recv_timeout_sec = 10, \
+	}
 
 /**
  * esp_hass_call_service configuration. The API accepts more options, but they
@@ -135,15 +150,6 @@ typedef struct {
 	{                                                           \
 		.domain = NULL, .service = NULL, .entity_id = NULL, \
 		.delay = portMAX_DELAY, .result_queue = NULL,       \
-	}
-
-/**
- * A macro to initialize esp_hass_config_t with defaults.
- */
-#define ESP_HASS_CONFIG_DEFAULT()                                           \
-	{                                                                   \
-		.access_token = NULL, .timeout_sec = 10, .ws_config = NULL, \
-		.result_queue = NULL, .event_queue = NULL,                  \
 	}
 
 /**
