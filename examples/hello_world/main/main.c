@@ -168,7 +168,7 @@ app_main(void)
 
 	/* define your domain, entity_id, and service here.
 	 *
-	 * the service is called once before the loop.
+	 * the service is called twice before the loop.
 	 */
 	char *entity_id = CONFIG_EXAMPLE_CALL_SERVICE_ENTITI_ID;
 	char *domain = CONFIG_EXAMPLE_CALL_SERVICE_DOMAIN;
