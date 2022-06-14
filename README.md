@@ -1,5 +1,24 @@
 # `esp_hass`
 
+A Home assistant WebSocket API client for `esp-idf`.
+
+## Features
+
+The client:
+
+* automatically connects to a Home Assistant and authenticates itself
+* can subscribe to events
+* can send commands
+* allows a user-provided event handler to handle received events
+
+## Examples
+
+Examples are under [examples](examples) directory.
+
+## Documentation
+
+See [include/esp_hass.h](include/esp_hass.h).
+
 ## Branches
 
 `main` is the latest development branch. All PRs should target this branch.
