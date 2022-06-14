@@ -1,0 +1,13 @@
+menu "esp_hass"
+    config ESP_HASS_TASK_EVENT_SOURCE_STACK_SIZE
+        int "stack size of esp_hass_task_event_source"
+        default 4096
+
+    config ESP_HASS_TASK_EVENT_SOURCE_QUEUE_SIZE
+        int "queue size of esp_hass_task_event_source"
+        default 10
+
+    config ESP_HASS_TASK_EVENT_SOURCE_DELAY_MS
+        int "The delay in ms when polling event queue in esp_hass_task_event_source"
+        default 3
+endmenu

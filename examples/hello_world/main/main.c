@@ -139,6 +139,17 @@ wifi_init()
 	return err;
 }
 
+static void
+message_handler(void *args, esp_event_base_t base, int32_t id, void *event_data)
+{
+	esp_hass_message_t *msg = NULL;
+
+	msg = (esp_hass_message_t *)event_data;
+	ESP_LOGI(TAG, "event id: %d", id);
+	ESP_LOGI(TAG, "message type: %d", msg->type);
+	ESP_LOGI(TAG, "message id: %d", msg->id);
+}
+
 void
 app_main(void)
 {
@@ -300,33 +311,32 @@ app_main(void)
 		    esp_err_to_name(err));
 		goto fail;
 	}
-	msg = NULL;
+
+	/* call the service (`toggle`) again so that the service retains the
+	 * original state.
+	 */
+	err = esp_hass_call_service(client, &call_service_config);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_hass_call_service: `%s`",
+		    esp_err_to_name(err));
+		goto fail;
+	}
+
+	/* register message_handler */
+	err = esp_hass_event_handler_register(client, message_handler);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_hass_event_handler_register(): %s",
+		    esp_err_to_name(err));
+		goto fail;
+	}
 
 	/* listen to event messages, and print received messages. */
 	ESP_LOGI(TAG, "Starting loop");
 	initial_heep_size = esp_get_free_heap_size();
-	for (int i = 1; i <= 200; i++) {
-		ESP_LOGI(TAG, "free_heep: %d", esp_get_free_heap_size());
-		if (xQueueReceive(event_queue, &msg, portMAX_DELAY) == pdTRUE) {
-			ESP_LOGI(TAG, "Message type: %d", msg->type);
-			json_string = cJSON_Print(msg->json);
-			if (json_string == NULL) {
-				ESP_LOGE(TAG, "cJSON_Print()");
-				goto fail;
-			}
-			ESP_LOGV(TAG, "Message json: %s", json_string);
-			free(json_string);
-			json_string = NULL;
-			err = esp_hass_message_destroy(msg);
-			if (err != ESP_OK) {
-				ESP_LOGE(TAG, "esp_hass_message_destroy: `%s`",
-				    esp_err_to_name(err));
-				goto fail;
-			}
-			msg = NULL;
-		}
-		vTaskDelay(10 / portTICK_PERIOD_MS);
+	for (int i = 0; i < 600; i++) {
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
+
 	current_heep_size = esp_get_free_heap_size();
 	ESP_LOGI(TAG,
 	    "initial_heep_size %d, current heep size %d, difference %d",

@@ -114,7 +114,6 @@ typedef struct {
 	    *ws_config; /*!< configuration of esp_websocket_client */
 	QueueHandle_t result_queue; /*!< queue handle for results */
 	QueueHandle_t event_queue;  /*!< queue handle for events */
-
 } esp_hass_config_t;
 
 /**
@@ -299,6 +298,27 @@ esp_err_t esp_hass_send_message_json(esp_hass_client_handle_t client,
  */
 esp_err_t esp_hass_call_service(esp_hass_client_handle_t client,
     esp_hass_call_service_config_t *config);
+
+/**
+ * @brief Register a message hander function.
+ *
+ * The message hander function is called with three arguments:
+ *
+ * message_handler(void *args, esp_event_base_t base, int32_t id, void
+ * *event_data);
+ *
+ * `args` is esp_hass_client_handle_t. `base` is the base event, and `id` is
+ * event id, and `event_data` is `esp_hass_message_t *`.
+ *
+ * The handler is called by `esp_hass_task_event_source` task, which keeps
+ * feeding messages into the handler.
+ *
+ * @param[in] client The hass client.
+ * @param[in] callback A callback function
+ */
+esp_err_t esp_hass_event_handler_register(esp_hass_client_handle_t client,
+    esp_event_handler_t callback);
+
 #ifdef __cplusplus
 }
 #endif
