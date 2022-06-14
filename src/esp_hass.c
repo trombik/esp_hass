@@ -51,6 +51,8 @@ static const char *TAG = "esp_hass";
 typedef struct {
 	const char *access_token;
 	int timeout_sec;
+	int command_send_timeout_sec;
+	int result_recv_timeout_sec;
 	const esp_websocket_client_config_t *ws_config;
 
 } hass_config_storage_t;
@@ -329,6 +331,10 @@ esp_hass_init(esp_hass_config_t *config)
 	hass_client->config.access_token = config->access_token;
 	hass_client->config.ws_config = config->ws_config;
 	hass_client->config.timeout_sec = config->timeout_sec;
+	hass_client->config.command_send_timeout_sec =
+	    config->command_send_timeout_sec;
+	hass_client->config.result_recv_timeout_sec =
+	    config->result_recv_timeout_sec;
 	hass_client->event_queue = config->event_queue;
 	hass_client->result_queue = config->result_queue;
 	hass_client->is_authenticated = false;
@@ -543,7 +549,9 @@ esp_hass_client_auth(esp_hass_client_handle_t client)
 	ESP_LOGI(TAG, "Sending auth message");
 	json_string_length = strlen(json_string);
 	length = esp_websocket_client_send_text(client->ws_client_handle,
-	    json_string, json_string_length, portMAX_DELAY);
+	    json_string, json_string_length,
+	    client->config.command_send_timeout_sec * 1000 /
+		portTICK_PERIOD_MS);
 	if (length < 0) {
 		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
 		err = ESP_FAIL;
@@ -637,6 +645,7 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 	esp_err_t err = ESP_FAIL;
 	char *json_string = NULL;
 	int length, json_string_length;
+	esp_hass_message_t *msg = NULL;
 
 	if (client == NULL) {
 		err = ESP_ERR_INVALID_ARG;
@@ -659,7 +668,9 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 	ESP_LOGI(TAG, "Sending subscribe_events command");
 	json_string_length = strlen(json_string);
 	length = esp_websocket_client_send_text(client->ws_client_handle,
-	    json_string, json_string_length, portMAX_DELAY);
+	    json_string, json_string_length,
+	    client->config.command_send_timeout_sec * 1000 /
+		portTICK_PERIOD_MS);
 	if (length < 0) {
 		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
 		err = ESP_FAIL;
@@ -671,9 +682,32 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 		err = ESP_FAIL;
 		goto fail;
 	}
-
+	if (xQueueReceive(client->result_queue, &msg,
+		client->config.result_recv_timeout_sec * 1000 /
+		    portTICK_PERIOD_MS) != pdTRUE) {
+		ESP_LOGE(TAG, "xQueueReceive(): timeout");
+		err = ESP_FAIL;
+		goto fail;
+	}
+	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
+		ESP_LOGE(TAG,
+		    "Unexpected response from the server: result type: %d",
+		    msg->type);
+		err = ESP_FAIL;
+		goto fail;
+	}
+	if (msg->success) {
+		ESP_LOGI(TAG, "subscription command success");
+	} else {
+		ESP_LOGE(TAG, "subscription command failed");
+		err = ESP_FAIL;
+		goto fail;
+	}
 	err = ESP_OK;
 fail:
+	if (msg != NULL) {
+		esp_hass_message_destroy(msg);
+	}
 	if (json_string != NULL) {
 		free(json_string);
 		json_string = NULL;
@@ -733,7 +767,8 @@ esp_hass_send_message_json(esp_hass_client_handle_t client, cJSON *json)
 	ESP_LOGI(TAG, "Sending message id: %d", client->message_id);
 	json_string_length = strlen(json_string);
 	length = esp_websocket_client_send_text(client->ws_client_handle,
-	    json_string, json_string_length, portMAX_DELAY);
+	    json_string, json_string_length,
+	    client->config.command_send_timeout_sec);
 	if (length < 0) {
 		ESP_LOGE(TAG, "esp_websocket_client_send_text(): failed");
 		err = ESP_FAIL;

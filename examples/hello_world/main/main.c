@@ -52,7 +52,7 @@ static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_num = 0;
 
 static void
-event_handler(void *arg, esp_event_base_t event_base, int32_t event_id,
+wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id,
     void *event_data)
 {
 	if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -95,9 +95,9 @@ wifi_init()
 	esp_event_handler_instance_t instance_any_id;
 	esp_event_handler_instance_t instance_got_ip;
 	ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-	    ESP_EVENT_ANY_ID, &event_handler, NULL, &instance_any_id));
+	    ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, &instance_any_id));
 	ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-	    IP_EVENT_STA_GOT_IP, &event_handler, NULL, &instance_got_ip));
+	    IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, &instance_got_ip));
 
 	wifi_config_t wifi_config = {
         .sta = {
@@ -117,8 +117,8 @@ wifi_init()
 
 	/* Waiting until either the connection is established
 	 * (WIFI_CONNECTED_BIT) or connection failed for the maximum number of
-	 * re-tries (WIFI_FAIL_BIT). The bits are set by event_handler() (see
-	 * above) */
+	 * re-tries (WIFI_FAIL_BIT). The bits are set by wifi_event_handler()
+	 * (see above) */
 	EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group,
 	    WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE,
 	    portMAX_DELAY);
@@ -161,7 +161,6 @@ app_main(void)
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = NULL;
 	esp_websocket_client_config_t ws_config = { 0 };
-	esp_hass_message_t *msg = NULL;
 	QueueHandle_t event_queue = NULL;
 	QueueHandle_t result_queue = NULL;
 	esp_hass_call_service_config_t call_service_config =
@@ -169,7 +168,7 @@ app_main(void)
 
 	/* define your domain, entity_id, and service here.
 	 *
-	 * the service is called once before the loop.
+	 * the service is called twice before the loop.
 	 */
 	char *entity_id = CONFIG_EXAMPLE_CALL_SERVICE_ENTITI_ID;
 	char *domain = CONFIG_EXAMPLE_CALL_SERVICE_DOMAIN;
@@ -223,12 +222,6 @@ app_main(void)
 	config.event_queue = event_queue;
 	config.result_queue = result_queue;
 
-	msg = calloc(1, sizeof(esp_hass_message_t));
-	if (msg == NULL) {
-		ESP_LOGE(TAG, "Out of memory");
-		goto fail;
-	}
-
 	/* Initialize NVS */
 	esp_err_t ret = nvs_flash_init();
 	if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -278,24 +271,6 @@ app_main(void)
 	if (err != ESP_OK) {
 		goto fail;
 	}
-	/* wait the result of subscribe_events command */
-	xQueueReceive(result_queue, &msg, portMAX_DELAY);
-	if (msg->type != HASS_MESSAGE_TYPE_RESULT) {
-		ESP_LOGE(TAG,
-		    "Unexpected response from the server: result type: %d",
-		    msg->type);
-		goto fail;
-	}
-	if (msg->success) {
-		ESP_LOGI(TAG, "Subscription successful");
-	} else {
-		ESP_LOGE(TAG, "Subscription unsuccessful");
-		goto fail;
-	}
-
-	/* when done with a message, destroy it with esp_hass_message_destroy()
-	 */
-	esp_hass_message_destroy(msg);
 
 	/* call a service, receive the result */
 	ESP_LOGI(TAG, "Call a service");
@@ -363,9 +338,6 @@ start_fail:
 	}
 
 init_fail:
-	if (msg != NULL) {
-		esp_hass_message_destroy(msg);
-	}
 	if (event_queue != NULL) {
 		vQueueDelete(event_queue);
 	}
