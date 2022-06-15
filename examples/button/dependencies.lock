@@ -1,0 +1,22 @@
+dependencies:
+  esp_websocket_client:
+    component_hash: bb420aebd2b07fa1aa0cc4a7dbf5db6d3635dc3d45ca6f59ed186cb2d9b2eef2
+    source:
+      git: https://github.com/trombik/esp-protocols.git
+      path: components/esp_websocket_client
+      type: git
+    version: ebf122bd36d9bbaaef8c2d1a23f1fa938946ab0b
+  espressif/button:
+    component_hash: 70fc59378878dd93b22dbc40c8c78a32da53126d59439c173398274165ebf99a
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 2.0.1
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 5.0.0
+manifest_hash: 1cf9c7b0e1050277a601ac900150c28d22f20820076546271980f72cdb71fd17
+target: esp32
+version: 1.0.0

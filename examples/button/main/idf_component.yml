@@ -1,0 +1,14 @@
+---
+## IDF Component Manager Manifest File
+dependencies:
+  espressif/button: "==2.0.1"
+  esp_websocket_client:
+    path: components/esp_websocket_client
+    git: "https://github.com/trombik/esp-protocols.git"
+    version: master
+    rules:
+      # esp-idf 5.x does not include esp_websocket_client in it. in others, it
+      # is included.
+      - if: "idf_version >=5.0"
+  idf:
+    version: ">=4.1.0"
