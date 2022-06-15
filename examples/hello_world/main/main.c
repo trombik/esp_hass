@@ -139,15 +139,31 @@ wifi_init()
 	return err;
 }
 
+/*
+ * A event handler thhat prints all the Home Assistant events
+ */
 static void
 message_handler(void *args, esp_event_base_t base, int32_t id, void *event_data)
 {
+	char *json_string = NULL;
 	esp_hass_message_t *msg = NULL;
+	esp_hass_client_handle_t client;
 
 	msg = (esp_hass_message_t *)event_data;
-	ESP_LOGI(TAG, "event id: %d", id);
-	ESP_LOGI(TAG, "message type: %d", msg->type);
-	ESP_LOGI(TAG, "message id: %d", msg->id);
+	client = (esp_hass_client_handle_t)args;
+
+	json_string = cJSON_Print(msg->json);
+	if (json_string == NULL) {
+		ESP_LOGE(TAG, "cJSON_Print");
+	} else {
+		ESP_LOGI(TAG, "json: %s", json_string);
+	}
+	if (json_string != NULL) {
+		free(json_string);
+	}
+	if (esp_hass_message_semaphore_give(client) != pdTRUE) {
+		ESP_LOGE(TAG, "esp_hass_message_semaphore_give()");
+	}
 }
 
 void
@@ -266,6 +282,16 @@ app_main(void)
 	ESP_LOGI(TAG, "Home assisstant version: %s",
 	    esp_hass_client_get_ha_version(client));
 
+	/* register message_handler */
+	ESP_LOGI(TAG, "Register message_handler");
+	err = esp_hass_event_handler_register(client, message_handler);
+	if (err != ESP_OK) {
+		ESP_LOGE(TAG, "esp_hass_event_handler_register(): %s",
+		    esp_err_to_name(err));
+		goto fail;
+	}
+
+	/* subscribe to all events */
 	ESP_LOGI(TAG, "Subscribe to all events");
 	err = esp_hass_client_subscribe_events(client, NULL);
 	if (err != ESP_OK) {
@@ -296,15 +322,6 @@ app_main(void)
 		goto fail;
 	}
 
-	/* register message_handler */
-	err = esp_hass_event_handler_register(client, message_handler);
-	if (err != ESP_OK) {
-		ESP_LOGE(TAG, "esp_hass_event_handler_register(): %s",
-		    esp_err_to_name(err));
-		goto fail;
-	}
-
-	/* listen to event messages, and print received messages. */
 	ESP_LOGI(TAG, "Starting loop");
 	initial_heep_size = esp_get_free_heap_size();
 	for (int i = 0; i < 600; i++) {

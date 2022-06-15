@@ -308,24 +308,47 @@ esp_err_t esp_hass_call_service(esp_hass_client_handle_t client,
     esp_hass_call_service_config_t *config);
 
 /**
- * @brief Register a message hander function.
+ * @brief Register an event message handler function.
+ *
+ * This function must be called before subscribing Home Assistant events.
+ *
+ * An event message handler is a user-defined handler that proccesses
+ * subscribed Home Assistant events.
  *
  * The message hander function is called with three arguments:
  *
  * message_handler(void *args, esp_event_base_t base, int32_t id, void
  * *event_data);
  *
- * `args` is esp_hass_client_handle_t. `base` is the base event, and `id` is
+ * `args` is `esp_hass_client_handle_t`. `base` is the base event, and `id` is
  * event id, and `event_data` is `esp_hass_message_t *`.
  *
  * The handler is called by `esp_hass_task_event_source` task, which keeps
  * feeding messages into the handler.
+ *
+ * The handler should call `esp_hass_message_semaphore_give()` when the passed
+ * message is no longer needed.
  *
  * @param[in] client The hass client.
  * @param[in] callback A callback function
  */
 esp_err_t esp_hass_event_handler_register(esp_hass_client_handle_t client,
     esp_event_handler_t callback);
+
+/**
+ * @brief Give semaphore to release message from message handler.
+ *
+ * Use this function when the message can be destroyed with
+ * esp_hass_message_destroy, usually at the end of the message handler.
+ * After the call, the message given to the handler is destroyed by another
+ * task.
+ *
+ * @param[in] client The hass client.
+ *
+ * @return
+ * - pdTRUE if releasing semaphore succeeds, otherwise pdFALSE
+ */
+BaseType_t esp_hass_message_semaphore_give(esp_hass_client_handle_t client);
 
 #ifdef __cplusplus
 }
