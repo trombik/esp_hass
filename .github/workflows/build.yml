@@ -179,8 +179,6 @@ jobs:
 
           # for supported versions by espressif, see:
           # https://docs.espressif.com/projects/esp-idf/en/latest/esp32/versions.html
-          - v4.2.3
-          - v4.3.2
           - v4.4.1
         target:
           - esp32
@@ -393,8 +391,6 @@ jobs:
 
           # esp32s2 support since v4.2.x
           - master
-          - v4.2.3
-          - v4.3.2
           - v4.4.1
         target:
           - esp32s2
@@ -503,7 +499,6 @@ jobs:
         branch:
           # esp32c3 support was introduced in v4.3.
           - master
-          - v4.3.2
           - v4.4.1
         target:
           - esp32c3
