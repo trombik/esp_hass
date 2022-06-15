@@ -868,7 +868,7 @@ esp_hass_call_service(esp_hass_client_handle_t client,
 	cJSON *json = NULL;
 	cJSON *json_error = NULL;
 	cJSON *json_error_msg = NULL;
-	esp_hass_message_t *msg;
+	esp_hass_message_t *msg = NULL;
 
 	ESP_LOGD(TAG, "domain: `%s` service: `%s` entity_id: `%s`",
 	    config->domain, config->service, config->entity_id);
@@ -916,7 +916,9 @@ esp_hass_call_service(esp_hass_client_handle_t client,
 	}
 	err = ESP_OK;
 fail:
-	esp_hass_message_destroy(msg);
+	if (msg != NULL) {
+		esp_hass_message_destroy(msg);
+	}
 	if (json != NULL) {
 		cJSON_Delete(json);
 	}
