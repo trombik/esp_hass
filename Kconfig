@@ -10,4 +10,14 @@ menu "esp_hass"
     config ESP_HASS_TASK_EVENT_SOURCE_DELAY_MS
         int "The delay in ms when polling event queue in esp_hass_task_event_source"
         default 3
+
+    config ESP_HASS_SEMAPHORE_TAKE_TIMEOUT_MS
+        int "The timeout in ms for xSemaphoreTake, when destorying message"
+        default 1000
+        help
+            The message hanlder is expected to process messages within this
+            time period.
+
+            Increase this if message handler takes more time than the default
+            to process messages.
 endmenu

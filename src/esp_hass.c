@@ -43,6 +43,8 @@
 #define ESP_HASS_RX_BUFFER_SIZE_BYTE (1024 * 10 + 1) // 10KB + NULL
 #define ESP_HASS_QUEUE_SEND_WAIT_MS (1000)
 #define ESP_HASS_VERSION_STRING_MAX_LEN (32)
+#define ESP_HASS_SEMAPHORE_TAKE_TIMEOUT_MS \
+	CONFIG_ESP_HASS_SEMAPHORE_TAKE_TIMEOUT_MS
 
 ESP_EVENT_DEFINE_BASE(HASS_EVENTS);
 
@@ -69,6 +71,7 @@ struct esp_hass_client {
 	QueueHandle_t event_queue;
 	QueueHandle_t result_queue;
 	esp_event_loop_handle_t event_loop_handle;
+	SemaphoreHandle_t message_semaphore;
 };
 
 static void
@@ -256,6 +259,12 @@ websocket_event_handler(void *handler_args, esp_event_base_t base,
 	}
 }
 
+BaseType_t
+esp_hass_message_semaphore_give(esp_hass_client_handle_t client)
+{
+	return xSemaphoreGive(client->message_semaphore);
+}
+
 /*
  * A task to listen to the event queue. When a message is received, post the
  * event message to user-defined event handler.
@@ -281,6 +290,13 @@ esp_hass_task_event_source(void *args)
 			ESP_LOGE(TAG, "esp_event_post_to(): %s",
 			    esp_err_to_name(err));
 		}
+		if (xSemaphoreTake(client->message_semaphore,
+			ESP_HASS_SEMAPHORE_TAKE_TIMEOUT_MS /
+			    portTICK_PERIOD_MS) == pdFALSE) {
+			ESP_LOGW(TAG,
+			    "xSemaphoreTake(): timeout. register a handler with esp_hass_event_handler_register(), or increase CONFIG_ESP_HASS_SEMAPHORE_TAKE_TIMEOUT_MS");
+		}
+
 		if (msg != NULL) {
 			esp_hass_message_destroy(msg);
 		}
@@ -339,6 +355,11 @@ esp_hass_init(esp_hass_config_t *config)
 	hass_client->result_queue = config->result_queue;
 	hass_client->is_authenticated = false;
 	hass_client->json = NULL;
+	hass_client->message_semaphore = xSemaphoreCreateBinary();
+	if (hass_client->message_semaphore == NULL) {
+		err = ESP_ERR_NO_MEM;
+		goto fail;
+	}
 	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
 	ESP_LOGI(TAG, "API access token: ****** (deducted)");
 	ESP_LOGI(TAG, "Websocket shutdown timeout: %d sec",
