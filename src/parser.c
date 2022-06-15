@@ -124,9 +124,13 @@ esp_hass_message_parse(char *data, int data_len)
 
 	return msg;
 fail:
-	cJSON_Delete(msg->json);
-	msg->json = NULL;
-	free(msg);
-	msg = NULL;
+	if (msg->json != NULL) {
+		cJSON_Delete(msg->json);
+		msg->json = NULL;
+	}
+	if (msg != NULL) {
+		free(msg);
+		msg = NULL;
+	}
 	return NULL;
 }
