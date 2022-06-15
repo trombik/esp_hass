@@ -11,6 +11,13 @@ The client:
 * can send commands
 * allows a user-provided event handler to handle received events
 
+## Supported `esp-idf` versions
+
+* `master`
+* `4.4.x`
+
+Older versions, such as `4.2.x` should work, but are not tested in the CI.
+
 ## Examples
 
 Examples are under [examples](examples) directory.

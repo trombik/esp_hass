@@ -1,0 +1,73 @@
+menu "Example Configuration"
+
+    config ESP_WIFI_SSID
+        string "WiFi SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config ESP_WIFI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+
+    config ESP_MAXIMUM_RETRY
+        int "Maximum retry"
+        default 5
+        help
+            Set the Maximum retry to avoid station reconnecting to the AP
+            unlimited when the AP is really inexistent.
+
+    config EXAMPLE_HASS_URI
+        string "Home Assistant WebSocket URI"
+        default "wss://hass.example.org/api/websocket"
+        help
+            WebSocket URI of the Home Assistant
+
+    config EXAMPLE_HASS_ACCESS_TOKEN
+        string "Access token"
+        default ""
+        help
+            Access token. Generate one from your account profile page. Click
+            "CREATE TOKEN" under "Long-Lived Access Tokens".
+
+    config EXAMPLE_CALL_SERVICE_ENTITI_ID
+        string "The entity ID to call the service"
+        default "switch.relay_backgarden_switch_light_1"
+        help
+            The entity ID of the service to call.
+
+    config EXAMPLE_CALL_SERVICE_DOMAIN
+        string "Domain of the service to call"
+        default "switch"
+        help
+            The domain of the service to call.
+
+    config EXAMPLE_CALL_SERVICE
+        string "The service to call"
+        default "toggle"
+        help
+            The service to call.
+
+    config EXAMPLE_BUTTON_GPIO_NUM
+        int "GPIO number of pin connected to a button switch"
+        default 14
+        help
+            The pin number of GPIO that is connected to a button switch. The
+            switch is must be grounded to common GND.
+
+    config EXAMPLE_STOP
+        bool "Stop the application after EXAMPLE_STOP_AFTER_MINUTE minutes"
+        default true
+        help
+            Stop the application after EXAMPLE_STOP_AFTER_MINUTE for testing
+            purpose. Set this false to run the application forever.
+
+    config EXAMPLE_STOP_AFTER_MINUTE
+        int "Stop the application after this minute"
+        default 30
+        depends on EXAMPLE_STOP
+        help
+            The time in minutes to stop the application.
+endmenu
