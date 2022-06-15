@@ -175,7 +175,6 @@ jobs:
       matrix:
         build_method:
           - idf
-          - make
         branch:
 
           # for supported versions by espressif, see:
