@@ -443,8 +443,10 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 
 	if (client->rx_buffer != NULL) {
 		free(client->rx_buffer);
+		client->rx_buffer = NULL;
 	}
 	free(client);
+	client = NULL;
 	return ESP_OK;
 }
 
@@ -852,10 +854,12 @@ create_call_service_json(esp_hass_call_service_config_t *config)
 fail_target:
 	if (target != NULL) {
 		cJSON_Delete(target);
+		target = NULL;
 	}
 fail:
 	if (json != NULL) {
 		cJSON_Delete(json);
+		json = NULL;
 	}
 	return NULL;
 }
@@ -918,15 +922,19 @@ esp_hass_call_service(esp_hass_client_handle_t client,
 fail:
 	if (msg != NULL) {
 		esp_hass_message_destroy(msg);
+		msg = NULL;
 	}
 	if (json != NULL) {
 		cJSON_Delete(json);
+		json = NULL;
 	}
 	if (json_error != NULL) {
 		cJSON_Delete(json_error);
+		json_error = NULL;
 	}
 	if (json_error_msg != NULL) {
 		cJSON_Delete(json_error_msg);
+		json_error_msg = NULL;
 	}
 	return err;
 }
