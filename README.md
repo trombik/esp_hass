@@ -65,6 +65,8 @@ connects to the WebSocket URL, and authenticated itself. Use
 `esp_hass_client_is_connected()` and `esp_hass_client_is_authenticated()` to
 get the current connection status.
 
+Optionally, subscribe to events by `esp_hass_client_subscribe_events()`.
+
 Here is an excerpt from an example. The code is not guaranteed to be correct
 (because it is not tested in the CI), but illustrates the idea.
 
@@ -168,6 +170,12 @@ app_main(void)
 	do {
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	} while (!esp_hass_client_is_authenticated(client));
+
+	ESP_LOGI(TAG, "Subscribe to all events");
+	err = esp_hass_client_subscribe_events(client, NULL);
+	if (err != ESP_OK) {
+		goto fail;
+	}
 
     /* do something */
 }
