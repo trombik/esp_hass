@@ -87,6 +87,7 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 	BaseType_t rtos_err = pdFALSE;
 
 	assert(client != NULL && msg != NULL && msg->json != NULL);
+	assert(client->result_queue != NULL);
 
 	switch (msg->type) {
 
@@ -144,6 +145,9 @@ message_handler(esp_hass_client_handle_t client, esp_hass_message_t *msg)
 	case HASS_MESSAGE_TYPE_PONG:
 	case HASS_MESSAGE_TYPE_EVENT:
 	default:
+		if (client->event_queue == NULL) {
+			break;
+		}
 		rtos_err = xQueueSend(client->event_queue, &msg,
 		    ESP_HASS_QUEUE_SEND_WAIT_MS / portTICK_PERIOD_MS);
 		if (rtos_err != pdTRUE) {
@@ -277,6 +281,14 @@ esp_hass_task_event_source(void *args)
 	esp_err_t err = ESP_FAIL;
 	esp_hass_client_handle_t client = (esp_hass_client_handle_t)args;
 
+	if (client->event_queue == NULL) {
+
+		/* event_queue is optional */
+		ESP_LOGD(TAG,
+		    "event_queue is not defined, deleting esp_hass_task_event_source()");
+		goto delete;
+	}
+
 	while (1) {
 		if (xQueueReceive(client->event_queue, &msg, portMAX_DELAY) !=
 		    pdTRUE) {
@@ -303,6 +315,7 @@ esp_hass_task_event_source(void *args)
 		vTaskDelay(
 		    pdMS_TO_TICKS(CONFIG_ESP_HASS_TASK_EVENT_SOURCE_DELAY_MS));
 	}
+	delete : vTaskDelete(NULL);
 }
 
 esp_err_t
@@ -353,6 +366,11 @@ esp_hass_init(esp_hass_config_t *config)
 	    config->result_recv_timeout_sec;
 	hass_client->event_queue = config->event_queue;
 	hass_client->result_queue = config->result_queue;
+	if (hass_client->result_queue == NULL) {
+		err = ESP_ERR_INVALID_ARG;
+		ESP_LOGE(TAG, "result_queue must not be NULL");
+		goto fail;
+	}
 	hass_client->is_authenticated = false;
 	hass_client->json = NULL;
 	hass_client->message_semaphore = xSemaphoreCreateBinary();
@@ -674,6 +692,7 @@ esp_hass_client_subscribe_events(esp_hass_client_handle_t client,
 		err = ESP_ERR_INVALID_ARG;
 		goto fail;
 	}
+	assert(client->result_queue != NULL);
 
 	err = esp_hass_create_message_subscribe_events(client, event_type);
 	if (err != ESP_OK) {

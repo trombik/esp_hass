@@ -51,8 +51,9 @@ and is passed to all `esp_hass_*` functions.
 Create a `esp_hass_config_t`, and initialize it with the Home Assistant URL,
 including TLS configuration.
 
-Create two FreeRTOS queues for events and commands. They are used to pass
-`esp_hass_message_t`, messages from Home Assistant.
+Create two FreeRTOS queues for events and command results. They are used to
+pass `esp_hass_message_t`, messages from Home Assistant. While `event_queue`
+is optional, `result_queue` is not.
 
 Initialize the client by `esp_hass_init()`.
 
