@@ -1,0 +1,22 @@
+---
+
+# see https://github.com/fuxingloh/multi-labeler
+version: v1
+labels:
+
+  # thses labels are used to draft relases.
+  - label: "enhancement"
+    matcher:
+      branch: "^(feat|feature)-.*"
+  - label: "bugfix"
+    matcher:
+      branch: "^(bugfix|fix)-.*"
+  - label: "doc"
+    matcher:
+      branch: "^(doc|documentation)-.*"
+  - label: "ci"
+    matcher:
+      branch: "^ci-.*"
+  - label: "chore"
+    matcher:
+      branch: "^chore-.*"
