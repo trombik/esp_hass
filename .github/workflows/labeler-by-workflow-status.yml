@@ -5,9 +5,10 @@
 name: Label by workflow status
 on:
   workflow_run:
-    - test-clang-format
-  types:
-    - completed
+    workflows:
+      - test-clang-format
+    types:
+      - completed
 
 jobs:
   on-clang-format-success:
