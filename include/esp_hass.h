@@ -121,7 +121,7 @@ typedef struct {
 	esp_websocket_client_config_t
 	    *ws_config; /*!< configuration of esp_websocket_client */
 	QueueHandle_t
-	    result_queue; /*!< A queue handle for results. Must not be NULL */
+	    result_queue;	/*!< A queue handle for results. Must not be NULL */
 	QueueHandle_t event_queue; /*!< An optional queue handle for events */
 } esp_hass_config_t;
 
