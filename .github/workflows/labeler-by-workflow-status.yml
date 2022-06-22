@@ -21,7 +21,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log(context)
+            console.log(context.payload.workflow_run.pull_requests)
 
   on-clang-format-failure:
     runs-on: ubuntu-latest
@@ -33,4 +33,4 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            console.log(context)
+            console.log(context.payload.workflow_run.pull_requests)
