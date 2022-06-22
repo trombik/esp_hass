@@ -367,15 +367,21 @@ esp_hass_init(esp_hass_config_t *config)
 	hass_client->event_queue = config->event_queue;
 	hass_client->result_queue = config->result_queue;
 	if (hass_client->result_queue == NULL) {
-		err = ESP_ERR_INVALID_ARG;
 		ESP_LOGE(TAG, "result_queue must not be NULL");
+		goto fail;
+	}
+	if (hass_client->config.ws_config == NULL) {
+		ESP_LOGE(TAG, "ws_config must not be NULL");
+		goto fail;
+	}
+	if (hass_client->config.ws_config->uri == NULL) {
+		ESP_LOGE(TAG, "ws_config->uri must not be NULL");
 		goto fail;
 	}
 	hass_client->is_authenticated = false;
 	hass_client->json = NULL;
 	hass_client->message_semaphore = xSemaphoreCreateBinary();
 	if (hass_client->message_semaphore == NULL) {
-		err = ESP_ERR_NO_MEM;
 		goto fail;
 	}
 	ESP_LOGI(TAG, "API URI: %s", hass_client->config.ws_config->uri);
@@ -398,7 +404,6 @@ esp_hass_init(esp_hass_config_t *config)
 		pdFALSE, NULL, shutdown_handler);
 	if (hass_client->shutdown_signal_timer == NULL) {
 		ESP_LOGE(TAG, "xTimerCreate(): fail");
-		err = ESP_ERR_NO_MEM;
 		goto fail;
 	}
 
@@ -437,6 +442,9 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 {
 	esp_err_t err = ESP_FAIL;
 
+	if (client == NULL) {
+		goto success;
+	}
 	if (client->shutdown_signal_timer != NULL &&
 	    xTimerDelete(client->shutdown_signal_timer, portMAX_DELAY) !=
 		pdPASS) {
@@ -465,6 +473,7 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 	}
 	free(client);
 	client = NULL;
+success:
 	return ESP_OK;
 }
 
@@ -611,7 +620,7 @@ fail:
 		free(json_string);
 		json_string = NULL;
 	}
-	if (client->json != NULL) {
+	if (client != NULL && client->json != NULL) {
 		cJSON_Delete(client->json);
 		client->json = NULL;
 	}
