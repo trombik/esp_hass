@@ -1,0 +1,35 @@
+---
+
+# add or remove labels by workflow status.
+
+name: Label by workflow status
+on:
+  workflow_run:
+    - test-clang-format
+  types:
+    - completed
+
+jobs:
+  on-clang-format-success:
+    runs-on: ubuntu-latest
+    if: >
+      ${{ github.event.workflow_run.name == 'test-clang-format' &&
+      github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Add success label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log(context)
+
+  on-clang-format-failure:
+    runs-on: ubuntu-latest
+    if: >
+      ${{ github.event.workflow_run.name == 'test-clang-format' &&
+      github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Add failure label
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log(context)
