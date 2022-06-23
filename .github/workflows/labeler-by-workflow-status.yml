@@ -4,8 +4,6 @@
 name: Label by workflow status
 on:
   workflow_run:
-    workflows:
-      - test-clang-format
     types:
       - completed
 
