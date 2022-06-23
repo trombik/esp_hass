@@ -19,7 +19,7 @@ jobs:
 
   on-clang-format-failure:
     runs-on: ubuntu-latest
-    if: ${{ contains(github.event.pull_request.labels.*.name, "ci/clang-format/failure") }}
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'ci/clang-format/failure') }}
     steps:
       - name: Add a comment (clang-format)
         uses: actions/github-script@v6
