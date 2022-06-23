@@ -53,7 +53,7 @@ jobs:
                 name: label_failure_name
               });
             } catch(e) {
-              if (!e.message.includes('Label does not exist') {
+              if (!e.message.includes('Label does not exist')) {
                 core.error(e);
                 core.setFailed(e.message);
               }
@@ -87,7 +87,7 @@ jobs:
                 name: label_success_name
               });
             } catch(e) {
-              if (!e.message.includes('Label does not exist') {
+              if (!e.message.includes('Label does not exist')) {
                 core.error(e);
                 core.setFailed(e.message);
               }
