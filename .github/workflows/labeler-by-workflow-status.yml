@@ -32,6 +32,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            import * as core from '@actions/core';
             label_success_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "success"
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
@@ -42,7 +43,8 @@ jobs:
                 labels: [label_success_name]
               });
             } catch(e) {
-              console.log(e);
+              core.error(e);
+              core.setFailed(e.message);
             }
             try {
               github.rest.issues.removeLabel({
@@ -52,7 +54,10 @@ jobs:
                 labels: [label_failure_name]
               });
             } catch(e) {
-              console.log(e);
+              if (e.response.status != 404) {
+                core.error(e);
+                core.setFailed(e.message);
+              }
             }
   on-failure:
     runs-on: ubuntu-latest
@@ -62,6 +67,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            import * as core from '@actions/core';
             label_success_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "success"
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
@@ -72,7 +78,8 @@ jobs:
                 labels: [label_failure_name]
               });
             } catch(e) {
-              console.log(e);
+              core.error(e);
+              core.setFailed(e.message);
             }
             try {
               github.rest.issues.removeLabel({
@@ -82,5 +89,8 @@ jobs:
                 labels: [label_success_name]
               });
             } catch(e) {
-              console.log(e);
+              if (e.response.status != 404) {
+                core.error(e);
+                core.setFailed(e.message);
+              }
             }
