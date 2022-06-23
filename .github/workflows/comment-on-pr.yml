@@ -18,6 +18,7 @@ jobs:
             console.log(JSON.stringify(context, null, 2))
 
   on-clang-format-failure:
+    runs-on: ubuntu-latest
     if: ${{ contains(github.event.pull_request.labels.*.name, "ci/clang-format/failure") }}
     steps:
       - name: Add a comment (clang-format)
