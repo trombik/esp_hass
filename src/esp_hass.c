@@ -22,7 +22,7 @@
  * see https://github.com/espressif/esp-idf/issues/8606 and
  * https://github.com/espressif/esp-idf/commit/52170fba7f43d933232d7f9579ad4d9892162935
  *
- * otherwise, older esp-idf builds fail.
+ * otherwise, older esp-idf builds fail. foo
  */
 
 #include <assert.h>
