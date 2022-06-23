@@ -4,9 +4,8 @@ on:
   pull_request:
     branches:
       - main
-
-  # include workflow_dispatch to enable manual trigger from Web UI.
-  workflow_dispatch:
+    types:
+      - labeled
 jobs:
   pre_build:
 
@@ -17,19 +16,20 @@ jobs:
     # if: ${{ needs.pre_build.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     outputs:
-      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+      should_skip: ${{ steps.skip_check.outputs.result }}
     steps:
       - id: skip_check
-        uses: fkirc/skip-duplicate-actions@v3.4.1
+        uses: actions/github-script@v6
         with:
-          concurrent_skipping: same_content
-          skip_after_successful_duplicate: "true"
+          result-encoding: string
+          script: |
+            console.log(JSON.stringify(context, null, 2))
 
-          # if the change includes documentation, or workflow YAML files, skip.
-          paths_ignore: '["docs/**", "**/*.md", "*.md", ".github/*.yml"]'
-
-          # but do not skip if the triggered event is one of these.
-          do_not_skip: '["workflow_dispatch", "schedule", "pull_request"]'
+            if (context.payload.label.name == "area:src") {
+              return true;
+            } else {
+              return false;
+            }
 
   # XXX create multiple jobs for major versions
   #
