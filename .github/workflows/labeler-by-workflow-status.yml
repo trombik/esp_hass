@@ -54,6 +54,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            const util = require("util");
+
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
               await github.rest.issues.addLabels({
@@ -67,13 +69,14 @@ jobs:
               core.setFailed(e.message);
             }
 
+            html_url = context.payload.workflow_run.html_url;
             switch (context.payload.workflow_run.name) {
               case "clang-format":
                 await github.rest.issues.createComment({
                   issue_number: context.payload.workflow_run.pull_requests[0].number,
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  body: "clang-format CI failed."
+                  body: util.format("clang-format CI failed. Please visit %s, and see the log", html_url),
                 });
                 break;
               default:
