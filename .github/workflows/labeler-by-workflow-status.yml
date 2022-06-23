@@ -66,3 +66,17 @@ jobs:
               core.error(e);
               core.setFailed(e.message);
             }
+  on-failure-clang-format:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow.name == 'clang-format' }}
+    steps:
+      - name: Comment on clang-format issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.payload.pull_requests[0].number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: |
+                clang-format CI failed.
