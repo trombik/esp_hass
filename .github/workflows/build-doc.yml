@@ -1,7 +1,6 @@
 ---
 name: Build doc
 on:
-  push:
   pull_request:
     branches:
       - main
