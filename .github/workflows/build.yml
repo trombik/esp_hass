@@ -26,9 +26,9 @@ jobs:
             console.log(JSON.stringify(context, null, 2))
 
             if (context.payload.label.name == "area:src") {
-              return true;
-            } else {
               return false;
+            } else {
+              return true;
             }
 
   # XXX create multiple jobs for major versions
