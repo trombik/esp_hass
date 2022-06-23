@@ -35,7 +35,7 @@ jobs:
                 break;
               case "synchronize":
                 let labels = context.payload.pull_request.labels.map(label => { return label.name };
-                if (!labels.includes("area:src") {
+                if (!labels.includes("area:src")) {
                   should_skip = true;
                 }
             }
