@@ -1,6 +1,6 @@
 ---
 
-name: test-clang-format
+name: clang-format
 on:
   - pull_request
 jobs:
