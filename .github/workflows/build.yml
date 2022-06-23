@@ -1,7 +1,6 @@
 ---
 name: Build examples
 on:
-  push:
   pull_request:
     branches:
       - main
