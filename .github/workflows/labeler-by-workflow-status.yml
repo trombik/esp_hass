@@ -87,6 +87,7 @@ jobs:
                 name: label_success_name
               });
             } catch(e) {
+              console.log(JSON.stringify(e, null, 2))
               if (e.response.status != 404) {
                 core.error(e);
                 core.setFailed(e.message);
