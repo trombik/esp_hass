@@ -20,3 +20,21 @@ labels:
   - label: "chore"
     matcher:
       branch: "^chore-.*"
+
+  # area indicates which files are modified in the PR.
+  - label: "area:doc"
+    sync: true
+    matcher:
+      files:
+        any:
+          - "include/**"
+          - "doc/**"
+  - label: "area:src"
+    sync: true
+    matcher:
+      files:
+        any:
+          - "include/**"
+          - "src/**"
+          - "examples/**"
+          - "component.mk"
