@@ -45,7 +45,7 @@ jobs:
               console.log(e);
             }
             try {
-              github.rest.issues.removeLabels({
+              github.rest.issues.removeLabel({
                 issue_number: context.payload.workflow_run.pull_requests[0].number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
