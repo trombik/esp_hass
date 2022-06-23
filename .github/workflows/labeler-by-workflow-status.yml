@@ -4,6 +4,13 @@
 name: Label by workflow status
 on:
   workflow_run:
+    # workflows that should run this workflow must be listed by name here
+    workflows:
+      - Build doc
+      - Build examples
+      - clang-format
+      - yamllint
+
     types:
       - completed
 
