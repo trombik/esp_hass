@@ -76,7 +76,7 @@ jobs:
                   issue_number: context.payload.workflow_run.pull_requests[0].number,
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  body: util.format("clang-format CI failed. Your code does not conform the style defined in [.clang-format](../blob/.clang-format). Please visit %s, and see the log. run\n ```console\nclang-format13 -i file\n```", html_url),
+                  body: util.format("clang-format CI failed. Your code does not conform the style defined in [.clang-format](../blob/main/.clang-format). Please visit %s, and see the log. run\n ```console\nclang-format13 -i file\n```", html_url),
                 });
                 break;
               default:
