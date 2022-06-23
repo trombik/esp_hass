@@ -1,0 +1,32 @@
+---
+
+# leave a comment about CI issues when a PR is labled
+
+name: Comment on CI issues
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  on-labeled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump context for debugging
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log(JSON.stringify(context, null, 2))
+
+  on-clang-format-failure:
+    if: ${{ contains(github.event.pull_request.labels.*.name, "ci/clang-format/failure") }}
+    steps:
+      - name: Add a comment (clang-format)
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: |
+                clang-format CI failed.
