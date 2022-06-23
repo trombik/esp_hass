@@ -6,6 +6,7 @@ on:
       - main
     types:
       - labeled
+      - synchronize
 jobs:
   pre_build:
 
@@ -24,12 +25,16 @@ jobs:
           result-encoding: string
           script: |
             console.log(JSON.stringify(context, null, 2))
+            let should_skip = false;
 
-            if (context.payload.label.name == "area:src") {
-              return false;
-            } else {
-              return true;
+            switch(context.payload.action) {
+              case "labeled":
+                if (context.payload.label.name != "area:src") {
+                  should_skip = true;
+                }
+                break;
             }
+            return should_skip;
 
   # XXX create multiple jobs for major versions
   #
