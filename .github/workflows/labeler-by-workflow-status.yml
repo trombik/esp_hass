@@ -56,7 +56,7 @@ jobs:
             }
   on-failure:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     steps:
       - name: Add failure label
         uses: actions/github-script@v6
