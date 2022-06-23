@@ -32,7 +32,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            import * as core from '@actions/core';
+            var core = require('@actions/core')
+
             label_success_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "success"
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
@@ -67,7 +68,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            import * as core from '@actions/core';
+            var core = require('@actions/core')
             label_success_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "success"
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
