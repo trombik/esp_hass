@@ -50,7 +50,7 @@ jobs:
                 issue_number: context.payload.workflow_run.pull_requests[0].number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                labels: [label_failure_name]
+                name: label_failure_name
               });
             } catch(e) {
               if (e.response.status != 404) {
@@ -84,7 +84,7 @@ jobs:
                 issue_number: context.payload.workflow_run.pull_requests[0].number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                labels: [label_success_name]
+                name: label_success_name
               });
             } catch(e) {
               if (e.response.status != 404) {
