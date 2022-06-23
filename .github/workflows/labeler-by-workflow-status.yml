@@ -32,19 +32,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            label_success_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "success"
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
-            try {
-              await github.rest.issues.addLabels({
-                issue_number: context.payload.workflow_run.pull_requests[0].number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                labels: [label_success_name]
-              });
-            } catch(e) {
-              core.error(e);
-              core.setFailed(e.message);
-            }
             try {
               await github.rest.issues.removeLabel({
                 issue_number: context.payload.workflow_run.pull_requests[0].number,
@@ -66,7 +54,6 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            label_success_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "success"
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
               await github.rest.issues.addLabels({
@@ -78,17 +65,4 @@ jobs:
             } catch(e) {
               core.error(e);
               core.setFailed(e.message);
-            }
-            try {
-              await github.rest.issues.removeLabel({
-                issue_number: context.payload.workflow_run.pull_requests[0].number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                name: label_success_name
-              });
-            } catch(e) {
-              if (!e.message.includes('Label does not exist')) {
-                core.error(e);
-                core.setFailed(e.message);
-              }
             }
