@@ -33,6 +33,11 @@ jobs:
                   should_skip = true;
                 }
                 break;
+              case "synchronize":
+                let labels = context.payload.pull_request.labels.map(label => { return label.name };
+                if (!labels.includes("area:src") {
+                  should_skip = true;
+                }
             }
             return should_skip;
 
