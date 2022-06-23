@@ -126,7 +126,7 @@ typedef struct {
 } esp_hass_config_t;
 
 /**
- * A macro to initialize esp_hass_config_t with defaults.
+ * A macro to initialize esp_hass_config_t with defaults. foo
  */
 #define ESP_HASS_CONFIG_DEFAULT()                                              \
 	{                                                                      \
