@@ -1,5 +1,4 @@
 ---
-
 # add or remove labels by workflow status.
 
 name: Label by workflow status
@@ -11,6 +10,15 @@ on:
       - completed
 
 jobs:
+  on-completed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump context for debugging
+        uses: actions/github-script@v6
+        with:
+          script: |
+            console.log(JSON.stringify(context, null, 2))
+
   on-clang-format-success:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.name == 'test-clang-format' && github.event.workflow_run.conclusion == 'success' }}
@@ -19,8 +27,16 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            payload = context.payload
-            console.log(JSON.stringify(payload, null, 2))
+            try {
+              github.rest.issues.addLabels({
+                issue_number: context.event.workflow_run.pull_requests[0].number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ["ci/clang-format:success"]
+              });
+            } catch(e) {
+              console.log(e);
+            }
 
   on-clang-format-failure:
     runs-on: ubuntu-latest
@@ -30,5 +46,13 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            payload = context.payload
-            console.log(JSON.stringify(payload, null, 2))
+            try {
+              github.rest.issues.addLabels({
+                issue_number: context.event.workflow_run.pull_requests[0].number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ["ci/clang-format:failure"]
+              });
+            } catch(e) {
+              console.log(e);
+            }
