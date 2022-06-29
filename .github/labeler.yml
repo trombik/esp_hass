@@ -38,3 +38,4 @@ labels:
           - "src/**"
           - "examples/**"
           - "component.mk"
+          - "test/**"
