@@ -457,7 +457,8 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 	}
 
 	if (client->ws_client_handle != NULL &&
-	    (err = esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK)) {
+	    (err = esp_websocket_client_destroy(client->ws_client_handle) !=
+		    ESP_OK)) {
 		ESP_LOGW(TAG, "esp_websocket_client_destroy(): %s",
 		    esp_err_to_name(err));
 	}
