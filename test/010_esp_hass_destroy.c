@@ -20,9 +20,9 @@ create_ws_config()
 	ws_config.uri = "https://hass.example.org/api/websocket";
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 	ws_config.crt_bundle_attach = esp_crt_bundle_attach;
-#endif
 	ws_config.reconnect_timeout_ms = 10000;
 	ws_config.network_timeout_ms = 10000;
+#endif
 
 	return &ws_config;
 }
