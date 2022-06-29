@@ -4,7 +4,7 @@
 
 name: Comment on CI issues
 on:
-  pull_request:
+  pull_request_target:
     types:
       - labeled
 jobs:
@@ -16,3 +16,38 @@ jobs:
         with:
           script: |
             console.log(JSON.stringify(context, null, 2))
+
+  on-ci-failure:
+    runs-on: ubuntu-latest
+
+    # "ci/${TEST_NAME}/${STATUS}"
+    if: ${{ startsWith(github.event.label.name, 'ci/') && endsWith(github.event.label.name. '/failure') }}
+    steps:
+      - name: Comment on CI failure
+        uses: actions/github-script@v6
+        with:
+          script: |
+            try {
+              let test_name = context.payload.label.name.split("/")[1];
+
+              switch(test_name) {
+                case "clang-format":
+                  await github.rest.issues.createComment({
+                    issue_number: context.payload.pull_request.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: "clang-format CI failed. Your code does not conform the style defined in [.clang-format](../blob/main/.clang-format). Please visit the test page, and see the log. run\n ```console\nclang-format13 -i file\n```",
+                  });
+                  break;
+                case default:
+                  await github.rest.issues.createComment({
+                    issue_number: context.payload.pull_request.number,
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    body: "`" + test_name + "` CI failed.",
+                  });
+              }
+            } catch(e) {
+              core.error(e);
+              core.setFailed(e.message);
+            }
