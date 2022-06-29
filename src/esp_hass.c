@@ -451,21 +451,17 @@ esp_hass_destroy(esp_hass_client_handle_t client)
 		ESP_LOGW(TAG, "xTimerDelete(): fail");
 	}
 	client->shutdown_signal_timer = NULL;
-	if (client->ws_client_handle != NULL &&
-	    esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
-		ESP_LOGW(TAG, "esp_websocket_client_destroy(): fail");
-	}
-	client->ws_client_handle = NULL;
 	if (client->json != NULL) {
 		cJSON_Delete(client->json);
 		client->json = NULL;
 	}
 
 	if (client->ws_client_handle != NULL &&
-	    esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK) {
+	    (err = esp_websocket_client_destroy(client->ws_client_handle) != ESP_OK)) {
 		ESP_LOGW(TAG, "esp_websocket_client_destroy(): %s",
 		    esp_err_to_name(err));
 	}
+	client->ws_client_handle = NULL;
 
 	if (client->rx_buffer != NULL) {
 		free(client->rx_buffer);
