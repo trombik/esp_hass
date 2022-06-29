@@ -39,3 +39,10 @@ labels:
           - "examples/**"
           - "component.mk"
           - "test/**"
+
+  - label: "area:ci"
+    sync: true
+    matcher:
+      files:
+        any:
+          - ".github/**"
