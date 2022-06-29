@@ -39,7 +39,7 @@ jobs:
                     body: "clang-format CI failed. Your code does not conform the style defined in [.clang-format](../blob/main/.clang-format). Please visit the test page, and see the log. run\n ```console\nclang-format13 -i file\n```",
                   });
                   break;
-                case default:
+                default:
                   await github.rest.issues.createComment({
                     issue_number: context.payload.pull_request.number,
                     owner: context.repo.owner,
