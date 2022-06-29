@@ -92,3 +92,33 @@ fail:
 	vQueueDelete(event_queue);
 	vQueueDelete(result_queue);
 }
+
+TEST_CASE("return ESP_OK[esp_hass_destroy]", "[esp_hass_destroy]")
+{
+	bool is_context_failed = false;
+	result_queue = xQueueCreate(queue_len,
+	    sizeof(struct esp_hass_message_t *));
+	if (result_queue == NULL) {
+		ESP_LOGE(TAG, "xQueueCreate(): Out of memory");
+		is_context_failed = true;
+		goto fail;
+	}
+	esp_hass_config_t *client_config =
+	    create_client_config(create_ws_config(), result_queue, NULL);
+	client = esp_hass_init(client_config);
+	if (client == NULL) {
+		ESP_LOGE(TAG, "esp_hass_init()");
+		is_context_failed = true;
+		goto fail;
+	}
+
+	ESP_LOGI(TAG, "when event queue is NULL");
+
+	TEST_ASSERT_EQUAL(ESP_OK, esp_hass_destroy(client));
+
+fail:
+	if (is_context_failed) {
+		TEST_FAIL_MESSAGE("context failed");
+	}
+	vQueueDelete(result_queue);
+}
