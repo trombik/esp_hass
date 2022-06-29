@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # "ci/${TEST_NAME}/${STATUS}"
-    if: ${{ startsWith(github.event.label.name, 'ci/') && endsWith(github.event.label.name. '/failure') }}
+    if: ${{ startsWith(github.event.label.name, 'ci/') && endsWith(github.event.label.name, '/failure') }}
     steps:
       - name: Comment on CI failure
         uses: actions/github-script@v6

@@ -31,6 +31,7 @@ jobs:
       - name: Add success label
         uses: actions/github-script@v6
         with:
+          github-token: ${{secrets.LABELER_TOKEN}}
           script: |
             label_failure_name = "ci" + "/" + context.payload.workflow_run.name + "/" + "failure"
             try {
@@ -53,6 +54,7 @@ jobs:
       - name: Add failure label
         uses: actions/github-script@v6
         with:
+          github-token: ${{secrets.LABELER_TOKEN}}
           script: |
             const util = require("util");
 
