@@ -1,12 +1,4 @@
 #include <esp_err.h>
-
-/* include esp_crt_bundle.h after esp_err.h. older esp-idf has a bug:
- *
- * components/mbedtls/esp_crt_bundle/include/esp_crt_bundle.h:39:1: error:
- * unknown type name 'esp_err_t'; did you mean '_stderr_r'?
- */
-
-#include <esp_crt_bundle.h>
 #include <esp_hass.h>
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
