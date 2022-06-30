@@ -2,11 +2,17 @@
 
 ## What the example does
 
+The example is a unit test application. Build and flash the application just
+like normal application. The application runs unit tests.
+
 ## Requirements
+
+- An esp32 development board
 
 ## Configuration
 
-Configure the example by `idf.py menuconfig`. The configurations for the
-example is under `Example Configuration`.
+The example does not have any configuration.
 
 ## Known issues
+
+None.
