@@ -24,8 +24,7 @@ TEST_CASE("return ESP_ERR_INVALID_ARG[esp_hass_client_start]",
 TEST_CASE("return ESP_OK[esp_hass_client_start]", "[esp_hass_client_start]")
 {
 	bool is_context_failed = false;
-	esp_hass_config_t *client_config =
-	    create_client_config(create_ws_config(), result_queue, event_queue);
+	esp_hass_config_t *client_config = NULL;
 
 	result_queue = xQueueCreate(queue_len,
 	    sizeof(struct esp_hass_message_t *));
@@ -41,6 +40,8 @@ TEST_CASE("return ESP_OK[esp_hass_client_start]", "[esp_hass_client_start]")
 		is_context_failed = true;
 		goto fail;
 	}
+	client_config = create_client_config(create_ws_config(), result_queue,
+	    event_queue);
 	client = esp_hass_init(client_config);
 	if (client == NULL) {
 		ESP_LOGE(TAG, "esp_hass_init()");
