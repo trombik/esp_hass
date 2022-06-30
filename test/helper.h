@@ -12,4 +12,8 @@ esp_hass_config_t *
 create_client_config(esp_websocket_client_config_t *ws_config,
     QueueHandle_t result_queue, QueueHandle_t event_queue);
 
+QueueHandle_t create_event_queue();
+QueueHandle_t create_result_queue();
+void delete_queue(QueueHandle_t result_queue);
+
 #endif

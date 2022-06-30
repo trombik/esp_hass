@@ -8,8 +8,45 @@
  */
 
 #include <esp_crt_bundle.h>
+#include <esp_hass.h>
+#include <esp_log.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
 
 #include "helper.h"
+
+static int queue_len = 5;
+static char *TAG = "helper";
+
+QueueHandle_t
+create_event_queue()
+{
+	static QueueHandle_t event_queue = NULL;
+	event_queue = xQueueCreate(queue_len,
+	    sizeof(struct esp_hass_message_t *));
+	if (event_queue == NULL) {
+		ESP_LOGE(TAG, "Out of memory");
+	}
+	return event_queue;
+}
+
+QueueHandle_t
+create_result_queue()
+{
+	static QueueHandle_t result_queue = NULL;
+	result_queue = xQueueCreate(queue_len,
+	    sizeof(struct esp_hass_message_t *));
+	if (result_queue == NULL) {
+		ESP_LOGE(TAG, "Out of memory");
+	}
+	return result_queue;
+}
+
+void
+delete_queue(QueueHandle_t result_queue)
+{
+	vQueueDelete(result_queue);
+}
 
 esp_websocket_client_config_t *
 create_ws_config()
